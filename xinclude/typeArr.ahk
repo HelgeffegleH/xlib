@@ -17,12 +17,12 @@
 		this.size:=sizeOfType
 		this.totalSize:=n*sizeOfType		; Total size of the array.
 		this.mute:=mute
-		this.ptr:=this.tryB("GlobalAlloc",this.totalSize)
+		this.ptr:=this.parentClass.mem.GlobalAlloc(this.totalSize)
 		
 	}
 	push(ptr){
 		if this.outOfBounds(this.len+1,1,this.maxLen)
-			this.tryB("exception", this.__Class . " failed @ push(), reason: Out of bounds, got: " . this.len+1 . ", expected value in range: [" . 1 . "," . this.maxLen "].",,-1,"Warn", "Exit")
+			this.parentClass.exception(this.__Class . " failed @ push(), reason: Out of bounds, got: " . this.len+1 . ", expected value in range: [" . 1 . "," . this.maxLen "].",,-1,"Warn", "Exit")
 		++this.len
 		NumPut(ptr, this.ptr, (this.len-1)*this.size, this.type)
 		
@@ -31,13 +31,13 @@
 	get(ind){
 		; Get the value at ind.
 		if this.outOfBounds(ind,1,this.len)
-			this.tryB("exception", this.__Class . " failed @ get(), reason: Out of bounds, got: " ind ", expected value in range: [" 1 "," this.len "].",,-1,"Warn", "Exit")
+			this.parentClass.exception(this.__Class . " failed @ get(), reason: Out of bounds, got: " ind ", expected value in range: [" 1 "," this.len "].",,-1,"Warn", "Exit")
 		return NumGet(this.ptr,(ind-1)*this.size,this.type)
 	}
 	getValPtr(ind){
 		; Get the pointer to the value at ind.
 		if this.outOfBounds(ind,1,this.maxLen)
-			this.tryB("exception", this.__Class . " failed @ getValPtr(), reason: Out of bounds, got: " ind ", expected value in range: [" 1 "," this.maxLen "].",,-1,"Warn", "Exit")
+			this.parentClass.exception(this.__Class . " failed @ getValPtr(), reason: Out of bounds, got: " ind ", expected value in range: [" 1 "," this.maxLen "].",,-1,"Warn", "Exit")
 		return this.getArrPtr()+this.size*(ind-1)
 	}
 	getArrPtr(){
@@ -49,21 +49,8 @@
 	outOfBounds(x,lb,ub){
 		return x<lb || x>ub
 	}
-	tryB(k,v*){
-		; For handling mute, without needing to have a reference  to  the  object  which
-		; initialised the array (if any).
-		local err,r,ref
-		try {
-			r:=(this.parentClass)[k](v*)
-		} catch err {
-			if this.mute
-				exit
-			throw err
-		}
-		return r
-	}
 	__Delete(){
-		this.tryB("GlobalFree",this.ptr)
+		this.parentClass.mem.GlobalFree(this.ptr)
 	}
 	
 	_NewEnum(){

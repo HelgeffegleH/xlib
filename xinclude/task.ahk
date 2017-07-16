@@ -12,7 +12,7 @@
 	}
 	getTask(ind){
 		; Returns a an object on the form:
-		; {pBin:pBin,pArgs:pArgs,start:bool,stackSize:stackSize}
+		; {pBin:pBin,pArgs:pArgs[,start:bool,stackSize:stackSize]}
 		; where,
 		;		pBin is a pointer to an executable binary buffer. Alocate memory with virtualAlloc()
 		; 		pArgs is a pointer to the arguments which will be "passed to pBin"
