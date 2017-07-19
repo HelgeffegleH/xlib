@@ -1,6 +1,5 @@
 ﻿; Note: Maybe add uFlags to globalAlloc params.
 class mem {
-	static parentClass:=xlib
 	;<< Memory allocation/free methods >>
 	globalAlloc(dwBytes){
 		; URL:
@@ -9,7 +8,7 @@ class mem {
 		static uFlags:=GMEM_ZEROINIT	; For clarity.
 		local hMem
 		if !(hMem:=DllCall("Kernel32.dll\GlobalAlloc", "Uint", uFlags, "Ptr", dwBytes, "Ptr"))
-			this.parentClass.exception("GlobalAlloc failed for dwBytes: " dwBytes,[hMem],-2)
+			xlib.exception("GlobalAlloc failed for dwBytes: " dwBytes,[hMem],-2)
 		return hMem
 	}
 	globalFree(hMem){
@@ -17,7 +16,7 @@ class mem {
 		;	- https://msdn.microsoft.com/en-us/library/windows/desktop/aa366579(v=vs.85).aspx (GlobalFree function)
 		local h
 		if h:=DllCall("Kernel32.dll\GlobalFree", "Ptr", hMem, "Ptr")
-			this.parentClass.exception("GlobalFree failed at hMem: " hMem,[h],-2)
+			xlib.exception("GlobalFree failed at hMem: " hMem,[h],-2)
 		return h
 	}
 	virtualAlloc(dwSize,flProtect:=0x40,flAllocationType:=0x1000 ){
@@ -30,7 +29,7 @@ class mem {
 		; flAllocationType:=0x1000- MEM_COMMIT
 		local bin
 		if !(bin:=DllCall("Kernel32.dll\VirtualAlloc", "Uptr",0, "Ptr", dwSize, "Uint", flAllocationType, "Uint", flProtect, "Ptr"))
-			this.parentClass.exception("VirtualAlloc failed for dwSize: " . dwSize . " flProtect: " . flProtect . " flAllocationType: " . flAllocationType . "." ,[bin],-2)
+			xlib.exception("VirtualAlloc failed for dwSize: " . dwSize . " flProtect: " . flProtect . " flAllocationType: " . flAllocationType . "." ,[bin],-2)
 		return bin
 	}
 	virtualFree(lpAddress){
@@ -43,7 +42,7 @@ class mem {
 		;	  If the function fails, the return value is 0 (zero). To get extended error information, call GetLastError.
 		static dwFreeType:=0x8000 ; MEM_RELEASE
 		if !DllCall("Kernel32.dll\VirtualFree", "Ptr", lpAddress, "Ptr", 0, "Uint", dwFreeType) ; Non-zero is ok!
-			this.parentClass.exception("VirtualFree failed for address: " lpAddress,,-2)
+			xlib.exception("VirtualFree failed for address: " lpAddress,,-2)
 		return 
 	}
 	virtualProtect(lpAddress,dwSize,flNewProtect){
@@ -51,7 +50,7 @@ class mem {
 		;	- msdn.microsoft.com/en-us/library/windows/desktop/aa366898(v=vs.85).aspx (VirtualProtect function)
 		local r, lpflOldProtect
 		if !(r:=DllCall("Kernel32.dll\VirtualProtect", "Ptr", lpAddress, "Ptr", dwSize, "Uint", flNewProtect, "Uint*", lpflOldProtect)) ; If the function fails, the return value is zero. 
-			this.parentClass.exception("VirtualProtect failed to apply new memory protection: . " flNewProtect . " at adress: " . lpAddress . " (" . dwBytes . " bytes).",,-2)
+			xlib.exception("VirtualProtect failed to apply new memory protection: . " flNewProtect . " at adress: " . lpAddress . " (" . dwBytes . " bytes).",,-2)
 		return lpflOldProtect
 	}
 }

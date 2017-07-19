@@ -1,43 +1,53 @@
 ﻿class typeArr {
+	; Might use comobjarray instead.
 	;<<typeArr>>
-	; To do, improve, eg, expand, delete, insertat, improve mute
+	; To do, improve, eg, expand, delete, insertat
 	;
 	; n, number of elements
-	; mute, suppress errors on true
 	; type, type of the elements. Can be any of the regular "NumPut"-types, eg, "Uint", "Char"...
 	; sizeOfType, the size in byte of the specified type, eg, Int -> 4
 	;
-	static parentClass:=xlib
+	
 	len:=0	; Number of elements in the array
-	__new(n,mute,type:="Ptr",sizeOfType:=0){ ; Mute as second param for now, beacuse of type,sizeOfType is convenient to leave out.
-		if !sizeOfType
-			sizeOfType:=A_PtrSize			; Default size is A_PtrSize
+	__new(n,type:="Ptr"){
+		; Default size is A_PtrSize
+		local sizeOf
+		sizeOf:=xlib.type.sizeof(type)
 		this.maxLen:=n						
 		this.type:=type						
-		this.size:=sizeOfType
-		this.totalSize:=n*sizeOfType		; Total size of the array.
-		this.mute:=mute
-		this.ptr:=this.parentClass.mem.GlobalAlloc(this.totalSize)
+		this.size:=sizeOf
+		this.totalSize:=n*sizeOf		; Total size of the array.
+		this.ptr:=xlib.mem.GlobalAlloc(this.totalSize)
 		
 	}
-	push(ptr){
+	push(val){
 		if this.outOfBounds(this.len+1,1,this.maxLen)
-			this.parentClass.exception(this.__Class . " failed @ push(), reason: Out of bounds, got: " . this.len+1 . ", expected value in range: [" . 1 . "," . this.maxLen "].",,-1,"Warn", "Exit")
+			xlib.exception(this.__Class . " failed @ push(), reason: Out of bounds, got: " . this.len+1 . ", expected value in range: [" . 1 . "," . this.maxLen "].",,-1,"Warn", "Exit")
 		++this.len
-		NumPut(ptr, this.ptr, (this.len-1)*this.size, this.type)
+		NumPut(val, this.ptr, (this.len-1)*this.size, this.type)
 		
 		return this.len
+	}
+	set(ind,val){
+		; set the value at ind.
+		if this.outOfBounds(ind,1,this.len)
+			xlib.exception(this.__Class . " failed @ set()," 
+										. (this.len ?  " reason: Out of bounds, got: " ind ", expected value in range:  [" 1 "," this.len "]." 
+													: " reason: length of array is 0."),,-1,"Warn", "Exit")
+		return NumPut(val,this.ptr,(ind-1)*this.size,this.type)
 	}
 	get(ind){
 		; Get the value at ind.
 		if this.outOfBounds(ind,1,this.len)
-			this.parentClass.exception(this.__Class . " failed @ get(), reason: Out of bounds, got: " ind ", expected value in range: [" 1 "," this.len "].",,-1,"Warn", "Exit")
+			xlib.exception(this.__Class . " failed @ get()," 
+										. (this.len ?  " reason: Out of bounds, got: " ind ", expected value in range:  [" 1 "," this.len "]." 
+													: " reason: length of array is 0."),,-1,"Warn", "Exit")
 		return NumGet(this.ptr,(ind-1)*this.size,this.type)
 	}
 	getValPtr(ind){
 		; Get the pointer to the value at ind.
 		if this.outOfBounds(ind,1,this.maxLen)
-			this.parentClass.exception(this.__Class . " failed @ getValPtr(), reason: Out of bounds, got: " ind ", expected value in range: [" 1 "," this.maxLen "].",,-1,"Warn", "Exit")
+			xlib.exception(this.__Class . " failed @ getValPtr(), reason: Out of bounds, got: " ind ", expected value in range: [" 1 "," this.maxLen "].",,-1,"Warn", "Exit")
 		return this.getArrPtr()+this.size*(ind-1)
 	}
 	getArrPtr(){
@@ -50,11 +60,11 @@
 		return x<lb || x>ub
 	}
 	__Delete(){
-		this.parentClass.mem.GlobalFree(this.ptr)
+		xlib.mem.globalFree(this.ptr)
 	}
 	
 	_NewEnum(){
-		return new this.parentClass.typeArr.Enum(this)
+		return new xlib.typeArr.Enum(this)
 	}
 	class Enum{
 		; Enum class for for-looping the ptrArr

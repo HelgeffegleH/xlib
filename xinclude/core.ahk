@@ -1,5 +1,5 @@
 ﻿class core {
-	static parentClass:=xlib
+	
 	;<< thread pool functions >>
 	createThreadPool(){
 		; Url:
@@ -8,7 +8,7 @@
 		;	- If function fails, it returns NULL.
 		local TP_POOL
 		if !(TP_POOL:=DllCall("Kernel32.dll\CreateThreadpool", "Ptr"))
-			this.parentClass.exception("Failed to create thread pool.",0,0,0)
+			xlib.exception("Failed to create thread pool.",0,0,0)
 		return TP_POOL
 	}
 	setThreadpoolThreadMaximum(TP_POOL, max){
@@ -27,7 +27,7 @@
 		;	- Sets the minimum number of threads that the specified thread pool must make available to process callbacks.
 		;	- If the function succeeds, it returns TRUE. If the function fails, it returns FALSE.
 		if !DllCall("Kernel32.dll\SetThreadpoolThreadMinimum", "Ptr", TP_POOL, "Uint", min)
-			this.parentClass.exception("SetThreadpoolThreadMinimum failed for minimum: " min) 
+			xlib.exception("SetThreadpoolThreadMinimum failed for minimum: " min) 
 		return
 	}
 	initializeThreadpoolEnvironment(){
@@ -131,10 +131,10 @@
 		static TP_CALLBACK_PRIORITY_NORMAL:=1
 		static sizeOf_TP_CALLBACK_ENVIRON_V1 := A_PtrSize == 4 ? 32 : 64	; The size depends on the os version.	(This is for Vista)
 		static sizeOf_TP_CALLBACK_ENVIRON_V3 := A_PtrSize == 4 ? 40 : 72	;										(This is for >vista)
-		envVerion := this.parentClass.getVersion()
+		envVerion := xlib.getVersion()
 		if !envVerion ; Remove
 			throw "envVerion"
-		pcbe := this.parentClass.mem.globalAlloc( envVerion == 1 ? sizeOf_TP_CALLBACK_ENVIRON_V1 : sizeOf_TP_CALLBACK_ENVIRON_V3)
+		pcbe := xlib.mem.globalAlloc( envVerion == 1 ? sizeOf_TP_CALLBACK_ENVIRON_V1 : sizeOf_TP_CALLBACK_ENVIRON_V3)
 		NumPut(envVerion, pcbe+0, 0, "Uint")																		; CallbackEnviron->Version
 		if (envVerion == 3){
 			NumPut(TP_CALLBACK_PRIORITY_NORMAL,		pcbe+0, A_PtrSize == 4 ? 32 : 60, "Uint")						; CallbackEnviron->CallbackPriority
@@ -170,7 +170,7 @@
 	createThreadpoolCleanupGroup(){
 		local PTP_CLEANUP_GROUP
 		if !(PTP_CLEANUP_GROUP:=DllCall("Kernel32.dll\CreateThreadpoolCleanupGroup","Ptr"))
-			this.parentClass.exception("CreateThreadpoolCleanupGroup failed.")
+			xlib.exception("CreateThreadpoolCleanupGroup failed.")
 		return PTP_CLEANUP_GROUP
 	}
 	setThreadpoolCallbackCleanupGroup(pcbe, PTP_CLEANUP_GROUP, PTP_CLEANUP_GROUP_CANCEL_CALLBACK:=0){
@@ -203,7 +203,7 @@
 		*/
 		local PTP_WORK
 		if !(PTP_WORK:=DllCall("Kernel32.dll\CreateThreadpoolWork", "Ptr", pfnwk, "Ptr", pv, "Ptr", pcbe, "Ptr"))
-			this.parentClass.exception("CreateThreadpoolWork failed.")
+			xlib.exception("CreateThreadpoolWork failed.")
 		return PTP_WORK
 	}
 	submitThreadpoolWork(PTP_WORK){
@@ -235,7 +235,7 @@
 		*/
 		local PTP_WAIT
 		if !(PTP_WAIT:=DllCall("Kernel32.dll\CreateThreadpoolWait", "Ptr", pfnwa, "Ptr", pv, "Ptr", pcbe, "Ptr"))
-			this.parentClass.exception("CreateThreadpoolWait failed.")
+			xlib.exception("CreateThreadpoolWait failed.")
 		return PTP_WAIT
 	}
 	setThreadpoolWait(PTP_WAIT, h:=0, pftTimeout:=0){
@@ -297,7 +297,7 @@
 		*/
 		local TP_TIMER
 		if !(TP_TIMER:=DllCall("Kernel32.dll\CreateThreadpoolTimer", "Ptr", pfnti, "Ptr", pv, "Ptr", pcbe, "Ptr"))
-			this.parentClass.exception("CreateThreadpoolTimer failed.",,-2)
+			xlib.exception("CreateThreadpoolTimer failed.",,-2)
 		return TP_TIMER
 	}
 	setThreadpoolTimer(pti, pftDueTime, msPeriod, msWindowLength){
@@ -321,6 +321,7 @@
 		;	- https://msdn.microsoft.com/en-us/library/windows/desktop/ms682453(v=vs.85).aspx (CreateThread function)
 		; Note:
 		;	- If the function fails, the return value is NULL.
+		;	- The thread object remains in the system until the thread has terminated and all handles to it have been closed through a call to CloseHandle.
 		/*
 		LPSECURITY_ATTRIBUTES  lpThreadAttributes,
 		SIZE_T                 dwStackSize,
@@ -337,7 +338,7 @@
 													,"Uint",	dwCreationFlags    
 													,"PtrP",	lpThreadId
 													,"Ptr")		; Return type
-			this.parentClass.exception("Thread initialise failed",[th],-2)
+			xlib.exception("Thread initialise failed",[th],-2)
 		return {hThread:th,threadId:lpThreadId}
 	}
 	resumeThread(hThread){
@@ -346,7 +347,7 @@
 		
 		local r:=DllCall("Kernel32.dll\ResumeThread", "Ptr", hThread, "Uint")
 		if (r == 0xFFFFFFFF)
-			this.exception("ResumeThread failed. Thread handle: " . hThread . ".",[r],-2)
+			xlib.exception("ResumeThread failed. Thread handle: " . hThread . ".",[r],-2)
 		return r
 	}
 	terminateThread(hThread,dwExitCode:=1){
@@ -366,11 +367,11 @@
 		;	stack is not freed, causing a resource leak.
 		static STILL_ACTIVE:=259
 		if !hThread
-			this.exception("TherminateThread failed, thread handle invalid.",,-2,"Warn")
+			xlib.exception("TherminateThread failed, thread handle invalid.",,-2,"Warn")
 		else if (dwExitCode==STILL_ACTIVE)
-			this.exception("TherminateThread failed, bad exit code: STILL_ACTIVE=259.",,-2,"Warn")
+			xlib.exception("TherminateThread failed, bad exit code: STILL_ACTIVE=259.",,-2,"Warn")
 		else if !DllCall("Kernel32.dll\TerminateThread", "PtrP", hThread, "Uint",  dwExitCode)		; If the function fails, the return value is zero
-			this.exception("","","",-2)
+			xlib.exception("","","",-2)
 		else
 			this.closeHandle(hThread)
 	}
@@ -391,9 +392,9 @@
 		local r
 		r:=DllCall("Kernel32.dll\WaitForMultipleObjects", "Uint", nCount, "Ptr", lpHandles, "Int", bWaitAll, "Uint", dwMilliseconds, "Uint")
 		if (r == WAIT_FAILED)
-			this.exception("WaitForMultipleObjects failed for " . nCount . " number of objects.",[r],-1)
+			xlib.exception("WaitForMultipleObjects failed for " . nCount . " number of objects.",[r],-1)
 		if (r == WAIT_ABANDONED)
-			this.exception("WaitForMultipleObjects failed for " . nCount . " number of objects. Reason: Wait abandoned" ,[r],-2)
+			xlib.exception("WaitForMultipleObjects failed for " . nCount . " number of objects. Reason: Wait abandoned" ,[r],-2)
 		return r
 	}
 	waitForSingleObject(hHandle,dwMilliseconds){
@@ -410,9 +411,9 @@
 		local r
 		r:=DllCall("Kernel32.dll\WaitForSingleObject", "Ptr", hHandle, "Uint", dwMilliseconds, "Uint")
 		if (r == WAIT_FAILED)
-			this.exception("WaitForSingleObject failed for handle " . hHandle . ".",[r],-1)
+			xlib.exception("WaitForSingleObject failed for handle " . hHandle . ".",[r],-1)
 		if (r == WAIT_ABANDONED)
-			this.exception("WaitForSingleObject failed for handle " . hHandle . ". Reason: Wait abandoned" ,[r],-2)
+			xlib.exception("WaitForSingleObject failed for handle " . hHandle . ". Reason: Wait abandoned" ,[r],-2)
 
 		return r
 	}
@@ -437,14 +438,14 @@
 			return false
 		else if r
 			return true
-		this.exception("WaitOnAddress failed, Address: " Address ", CompareAddress: " CompareAddress ", AddressSize: " AddressSize,,-2) 
+		xlib.exception("WaitOnAddress failed, Address: " Address ", CompareAddress: " CompareAddress ", AddressSize: " AddressSize,,-2) 
 	}
 	;<< Misc >>
 	closeHandle(hObject){
 		; Url:
 		;	- http://msdn.microsoft.com/en-us/library/windows/desktop/ms724211%28v=vs.85%29.aspx (CloseHandle function)
 		if !DllCall("Kernel32.dll\CloseHandle", "Ptr", hObject)
-			this.exception("Close handle failed to close handle: " hObject,,-2)
+			xlib.exception("Close handle failed to close handle: " hObject,,-2)
 	}
 	createEvent(lpEventAttributes, bManualReset, bInitialState, lpName){
 		; Url:
@@ -461,14 +462,14 @@
 		*/
 		local handle
 		if !(handle:=DllCall("Kernel32.dll\CreateEvent", "Ptr", lpEventAttributes, "Int", bManualReset, "Int", bInitialState, "Str", lpName, "Ptr"))		
-			this.parentClass.exception("CreateEvent failed for name: " . lpName . ".",,-2)
+			xlib.exception("CreateEvent failed for name: " . lpName . ".",,-2)
 		return handle
 	}
 	setEvent(hEvent){
 		; Url:
 		;	- https://msdn.microsoft.com/en-us/library/windows/desktop/ms686211(v=vs.85).aspx (SetEvent function)
 		if !DllCall("Kernel32.dll\SetEvent", "Ptr", hEvent)
-			this.parentClass.exception("SetEvent failed for handle: " hEvent,,-2)
+			xlib.exception("SetEvent failed for handle: " hEvent,,-2)
 		return
 	}
 }

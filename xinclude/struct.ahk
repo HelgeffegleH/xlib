@@ -1,5 +1,5 @@
 ﻿; Primitive struct class.
-; Specify size, eg, myStruct:= new struct(16)
+; Specify size, eg, myStruct:= new struct(16,cleanUpFn,name)
 ; then build struct:
 ;					myStruct.build(	 ["type",value[,"memberName"]]
 ;									,["Uint",37, "theNumber"]
@@ -10,16 +10,20 @@
 ; Change member values, myStruct.Set("memberName", value)
 ; Retrieve member values, value := myStruct.Get("memberName")
 ; Free memory, myStruct:="" (if last reference is freed.)
+; Before memory is freed, the user defined clean up function is called with a reference to the the struct. For manual clean up of members or other things.
 ;
 class struct{
-	static parentClass:=xlib
+	
 	members:=[]
 	nMembers:=0
-	__new(size,name:=""){
-		this.name:=name ; Only for db purposes, you'll get the name in the error msg.
-		this.ptr:=this.parentClass.mem.globalAlloc(size)
+	__new(size,cleanUpFn:="",name:=""){
+		this.cleanUpFn:= {Func:1,BoundFunc:1}[Type(cleanUpFn)] ? cleanUpFn : (isFunc(cleanUpFn) ? func(cleanUpFn) : false)	; Func or bound func object to call when the struct is deleted, for clean up. 
+																															; It should take one parameter, a reference to the struct being deleted. I.e, "this"
+																															; 
+		this.name:=name 																									; Only for db purposes, you'll get the name in the error msg.									
+		this.ptr:=xlib.mem.globalAlloc(size)
 		this.maxSize:=size
-		this.offset:=0		
+		this.offset:=0
 	}
 	build(members*){
 		; members is an array of member arrays, [type,val,membername:=""]
@@ -34,11 +38,11 @@ class struct{
 			return
 		}
 		++this.nMembers
-		size:=this.parentClass.type.sizeOf(type)
+		size:=xlib.type.sizeOf(type)
 		this.offset+=size	; Add to offset for error check
 		
 		memberName:= memberName!="" ? memberName : this.nMembers
-		typeObj := new this.parentClass[type](val, this.ptr+this.offset-size)	; Subtract size because size was already added for error check.
+		typeObj := new xlib[type](val, this.ptr+this.offset-size)	; Subtract size because size was already added for error check.
 		
 		this.members[memberName]:={offset:this.offset, typeObj:typeObj}
 		
@@ -48,13 +52,13 @@ class struct{
 		local value
 		local member:=this.members[memberName]
 		if !member
-			this.parentClass.exception("Struct " this.name " has no member " memberName ".",,-2)
+			xlib.exception("Struct " this.name " has no member " memberName ".",,-2)
 		return member.typeObj.val
 	}
 	set(memberName,value){
 		local member:=this.members[memberName]
 		if !member
-			this.parentClass.exception("Struct " this.name " has no member " memberName ".",,-2)
+			xlib.exception("Struct " this.name " has no member " memberName ".",,-2)
 		member.typeObj.val:=value
 		return 
 	}
@@ -63,7 +67,7 @@ class struct{
 			if (this.o="")
 				this.o:=0
 			if (value>this.maxSize)
-				this.parentClass.exception("struct " this.name " has exceeded maximum size " this.maxSize " by " value-this.maxSize " bytes.",,-3)
+				xlib.exception("struct " this.name " has exceeded maximum size " this.maxSize " by " value-this.maxSize " bytes.",,-3)
 			return this.o:=value
 		} get {
 			return this.o
@@ -71,12 +75,14 @@ class struct{
 	}
 	pointer{
 		set{
-			this.parentClass.exception("Access denied.",,-3)
+			xlib.exception("Access denied.",,-3)
 		} get {
 			return this.ptr
 		}
 	}
 	__Delete(){
-		this.parentClass.mem.globalFree(this.ptr)
+		if this.cleanUpFn
+			this.cleanUpFn.Call(this)	; It seems ok to call func / bound func object with excessive amount paramters. If this changes, it needs to be handled here ;<< note >>
+		xlib.mem.globalFree(this.ptr)
 	}
 }

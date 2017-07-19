@@ -4,7 +4,8 @@
 ; myChar:= new char(37)
 ; Specify a memory address for ptr for custom memory allocation, will not be free automatically. "Caller" frees.
 ; Otherwise, memory is allocated and freed when last reference to the type object is released, eg, myChar:=""
-;<< double >>
+
+; todo: Add clean up function, see struct.
 
 ;<< float >>
 class float extends xlib.type {
@@ -24,7 +25,7 @@ class float extends xlib.type {
 		throw Exception("Value out of bounds: " val,-2)
 	}
 }
-
+;<< double >>
 class double extends xlib.float {
 	__new(val,ptr:=""){
 		base.__new(val,ptr,"double")
@@ -108,7 +109,7 @@ class strbuf extends xlib.type{
 	__new(len,enc:=""){
 		this.len:=len
 		this.size:=(len+1)*(enc="utf-16" || enc="cp1200" ? 2 : 1) ; Deduced from the manual. 
-		this.ptr:=this.parentClass.mem.globalAlloc(this.size)
+		this.ptr:=xlib.mem.globalAlloc(this.size)
 		this.enc:=enc
 	}
 	str{
@@ -130,7 +131,7 @@ class strbuf extends xlib.type{
 		}
 	}
 	outOfBoundsException(value){
-		this.parentClass.exception("String to long: " strlen(value) ". Maximum length: " this.len,,-2)
+		xlib.exception("String to long: " strlen(value) ". Maximum length: " this.len,,-2)
 	}
 	outOfBounds(val){
 		return (StrLen(val)+1) * (this.enc="utf-16" || this.enc="cp1200" ? 2 : 1)  > this.size
@@ -138,11 +139,10 @@ class strbuf extends xlib.type{
 }
 ;<< type >>
 class type {
-	static parentClass:=xlib
 	__new(val,type,ptr:=""){
 		if !(this.size:=this.sizeof(type))
-			this.parentClass.exception("Invalid type: " type)
-		this.ptr:= ptr ? ptr : this.parentClass.mem.globalAlloc(this.size)
+			xlib.exception("Invalid type: " type)
+		this.ptr:= ptr ? ptr : xlib.mem.globalAlloc(this.size)
 		this.isStructMember:= ptr ? true : false
 		this.type:=type
 		this.val:=val
@@ -152,11 +152,11 @@ class type {
 	}
 	__Delete(){
 		if !this.isStructMember	; Structs free their members.
-			this.parentClass.mem.globalFree(this.ptr)
+			xlib.mem.globalFree(this.ptr)
 	}
 	pointer {	; The pointer to the memory space
 		set{
-			this.parentClass.exception("Access denied.",,-2)
+			xlib.exception("Access denied.",,-2)
 		}
 		get{
 			return this.ptr
@@ -169,7 +169,7 @@ class type {
 		}
 		get{
 			if (this.ub="")
-				this.parentClass.exception("Maximum value not defined for: " this.type,,-2)
+				xlib.exception("Maximum value not defined for: " this.type,,-2)
 			return this.ub
 		}
 	}
@@ -179,7 +179,7 @@ class type {
 		}
 		get{
 			if (this.lb="")
-				this.parentClass.exception("Minimum value not defined for: " this.type,,-2)
+				xlib.exception("Minimum value not defined for: " this.type,,-2)
 			return this.lb
 		}
 	}
@@ -202,12 +202,12 @@ class type {
 	sizeof(type){
 		static sizeMap:={Ptr:A_PtrSize,Uptr:A_PtrSize,Uint:4,Int:4,Int64:8,Ushort:2,Short:2,Uchar:1,Char:1,Float:4,Double:8}
 		if !sizeMap.haskey(type)
-			this.parentClass.exception("Invalid type: " type ".",,-2)
+			xlib.exception("Invalid type: " type ".",,-2)
 		return sizeMap[type]
 	}
 	
 }
-
+;<< FILETIME >>
 class FILETIME {
 	; Very much unverified
 	; Url:
@@ -218,9 +218,8 @@ class FILETIME {
 		DWORD dwHighDateTime;
 	} FILETIME, *PFILETIME;
 	*/
-	static parentClass:=xlib
 	__new(time:=0,low:="",high:=""){
-		this.mem:=this.parentClass.mem.globalAlloc(8)
+		this.mem:=xlib.mem.globalAlloc(8)
 		if (low!="" && high!=""){
 			this.dwLowDateTime:=low
 			this.dwHighDateTime:=high
@@ -277,12 +276,12 @@ class FILETIME {
 		}
 	}
 	__Delete(){
-		this.parentClass.mem.globalFree(this.mem)
+		xlib.mem.globalFree(this.mem)
 	}
 	; Misc, db purposes
 	systemTimeToFileTime(lpSystemTime, ByRef lpFileTime){
 		if !DllCall("Kernel32.dll\SystemTimeToFileTime", "Ptr", lpSystemTime, "Int64P", lpFileTime)
-			this.parentClass.exception("SystemTimeToFileTime failed")
+			xlib.exception("SystemTimeToFileTime failed")
 	}
 	GetSystemTime(ByRef st){
 		VarSetCapacity(st,16,0)

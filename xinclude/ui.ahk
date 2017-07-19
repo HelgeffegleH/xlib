@@ -1,6 +1,6 @@
 ﻿class ui {
 	; User classes and methods.
-	static parentClass:=xlib
+	
 	
 	#include task.ahk	; For "manual" thread handling.
 	#include pool.ahk	; For thread pooling.
@@ -18,14 +18,14 @@
 		if !dll
 			dll:=DllCall("Kernel32.dll\LoadLibrary", "Str", lib, "Ptr")
 		if !dll
-			this.parentClass.exception("Failed to load library: " lib,,-1)
+			xlib.exception("Failed to load library: " lib,,-1)
 		if (suffixWA==1)
 			fn.= A_IsUnicode ? "W" : "A"
 		fnPtr:=DllCall("Kernel32.dll\GetProcAddress", "Ptr", dll, "AStr", fn, "Ptr")
 		if (!fnPtr && suffixWA==-1)
 			fnPtr:=DllCall("Kernel32.dll\GetProcAddress", "Ptr", dll, "AStr", fn . (A_IsUnicode ? "W" : "A"), "Ptr")
 		if !fnPtr
-			this.parentClass.exception("Failed to get procedure adress: " fn,,-1)
+			xlib.exception("Failed to get procedure adress: " fn,,-1)
 		if free ; This is probably not wanted.
 			this.freeLibrary(dll)
 		return fnPtr
@@ -36,12 +36,15 @@
 		; Notes:
 		;	If the function succeeds, the return value is nonzero.
 		if !DllCall("Kernel32.dll\FreeLibrary", "Ptr", lib)
-			this.parentClass.exception("Free library failed for: " lib,,-2)
+			xlib.exception("Free library failed for: " lib,,-2)
 		return 1
 	}
 	setMemoryReadOnly(ptr,size){
 		; Returns previous memory settings and set new to PAGE_READONLY
 		static PAGE_READONLY:=0x02
-		return this.parentClass.mem.virtualProtect(ptr,size,PAGE_READONLY)
+		return xlib.mem.virtualProtect(ptr,size,PAGE_READONLY)
+	}
+	exception(p*){
+		return xlib.exception(p*)
 	}
 }

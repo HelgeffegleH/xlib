@@ -3,8 +3,8 @@
 		return this.exception(msg,r,depth,output)
 	}
 	exception(msg,r,depth,output){
-		Critical
-		msg.="`n`nErrorLevel: " . ErrorLevel . "`nLast error: " . this.formatLastError() . (IsObject(r) ? "`nFunction returned: " . r[1] : "`nNo return value specified.")
+		Critical ; ?
+		msg.="`n`nErrorLevel: " . ErrorLevel . "`nLast error: " . this.formatLastError() . (IsObject(r) ? "`nFunction returned: " . r[1] : "`nNo return value specified.") . this.getCallStack()
 		if (cleanUp==1)
 			this.cleanUp()
 		this.lastError:=Exception(msg,-abs(depth)-3) ; -3 to never show inside error class.
@@ -30,5 +30,17 @@
 		if !DllCall("Kernel32.dll\HeapFree", "Ptr", DllCall("Kernel32.dll\GetProcessHeap","Ptr"), "Uint", 0, "Ptr", lpBuffer) ; If the function succeeds, the return value is nonzero.
 			throw Exception("HeapFree failed.")
 		return StrReplace(msg,"`r`n") . "  " . msgn . Format(" (0x{:04x})",msgn)
+	}
+	getCallStack(){
+		; The goal was to make this as ugly as possible, mission completed.
+		local c,o,h,k,v,str
+		o:=[]
+		h:=0
+		while !((c:=exception("",-5-abs(h)).What)<0)
+			o.insertAt(1,c),h++
+		str:="`n`nCallstack:`n"
+		for k, v in o
+			str.=k " " v "`n" 
+		return str
 	}
 }
