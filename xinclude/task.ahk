@@ -49,7 +49,7 @@
 		; Eg: myCallbackFunction(param1,...,callbackNumber, this){...}
 		local pCb, callbackNumber
 		if !restarting {
-			callbackFunction:=this.verifyCallback(callbackFunction)
+			callbackFunction:=xlib.verifyCallback(callbackFunction)
 			callbackNumber:=this.callbackFunctions.Push(callbackFunction)
 			this.makeCallbackStruct(pBin,pArgs,callbackNumber)
 		} else {
@@ -110,7 +110,7 @@
 		return
 	}
 	setCallback(ind,callback){
-		callback:=this.verifyCallback(callback)
+		callback:=xlib.verifyCallback(callback)
 		this.callbackFunctions[ind]:=callback
 	}
 	startTask(ind){
@@ -222,10 +222,15 @@
 	callbackReciever(wParam, lParam, msg, hwnd){
 		; wParam is the address to the object which requested the callback
 		; lParam is the callback number of that object.
-		;Critical()
+		static WAIT_TIMEOUT:=	0x00000102
+		static max_wait:=100								
+		Critical()
 		this:=Object(wParam)
+		if this.waitForTask(lParam,max_wait)==WAIT_TIMEOUT													; This doesn't even happen on max_wait 0, in simple test case.  Consider remove.
+			xlib.exception("Callback recieved but thread has not finished after waiting " max_wait "ms.")	; There isn't a problem closing the handle if the thread is running anyways, it seems.
 		; Close thread handle here so it is done when user recieves the callback.
 		this.cleanUpThread(lParam)
+		
 		if this.callbackFunctions.Haskey(lParam) 
 			this.callbackFunctions[lParam].Call(lParam,this)	 ;<< note >> use threadFunc instead. To ensure the below is executed if the user function would throw an exception.
 		if this.autoReleaseCallbackStructAfterCallback[lParam]
@@ -261,11 +266,13 @@
 		*/
 		static sizeOfudf:=A_PtrSize*2
 		static sizeOfParams:=A_PtrSize*5+4
+		static pPostMessage
 		static msgWin
-		local pPostMessage, udf, params
+		local udf, params
 		if !msgWin
 			msgWin:=guiCreate()
-		pPostMessage:=xlib.ui.getFnPtrFromLib("User32.dll","PostMessage",true)
+		if !pPostMessage
+			pPostMessage:=xlib.ui.getFnPtrFromLib("User32.dll","PostMessage",true)
 		
 		udf		:= new xlib.struct(sizeOfudf, 										, "taskCallbackUDF")
 		params	:= new xlib.struct(sizeOfParams,	Func("ObjRelease").Bind(&this)	, "taskCallbackParams")
@@ -291,9 +298,9 @@
 		local cbs
 		cbs:=this.callbackStructs[callbackNumber] ; convenience.
 		cbs.udf:= new xlib.struct(sizeOfudf, 	"taskCallbackUDF")
-		cbs.udf.build(	 ["Ptr",	pBin, 	"pudFn"		]									; udf struct
+		cbs.udf.build(	 ["Ptr",	pBin, 	"pudFn"		]								; udf struct
 						,["Ptr",	pArgs,	"pParams"	])
-		cbs.params.Set("userStruct", cbs.udf.pointer)
+		cbs.params.Set("userStruct", cbs.udf.pointer)									; Set userStruct member of params struct.
 		return
 	}
 	initDataArrays(restarting:=false){
@@ -304,16 +311,16 @@
 		this.thHArr:= new xlib.typeArr(this.maxTasks)		; thread handle array
 		this.tIdArr:= new xlib.typeArr(this.maxTasks)		; thread id array
 	}
-	verifyCallback(callbackFunction){
-		if !IsFunc(callbackFunction) && type(callbackFunction)!="BoundFunc"		; It is not a func object, a function name or a bound func, error
-			xlib.exception(A_ThisFunc " failed, invalid callbackFunction",,-2)
-		if !IsObject(callbackFunction) ; It is a function name. Make func object.
-			callbackFunction:=func(callbackFunction)
-		return callbackFunction
-	}
 	verifyInd(ind){
 		local caller:=Exception("",-2).What
 		if !this.indexInRange(ind,1,this.thHArr.getLength())
 			xlib.exception("Invalid")
+	}
+	__Delete(){
+		local k, hThread
+		try {
+			for k, hThread in this.thHArr
+				xlib.core.closeHandle(hThread)
+		}
 	}
 }
