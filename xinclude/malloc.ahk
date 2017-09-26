@@ -19,7 +19,7 @@ class mem {
 			xlib.exception("GlobalFree failed at hMem: " hMem,[h],-2)
 		return h
 	}
-	virtualAlloc(dwSize,flProtect:=0x40,flAllocationType:=0x1000 ){
+	virtualAlloc(dwSize,flProtect:=0x40,flAllocationType:=0x1000 ){ ; These defaults are relied upon by rawPut. 
 		; Url:
 		;	- https://msdn.microsoft.com/en-us/library/windows/desktop/aa366887(v=vs.85).aspx (VirtualAlloc function)
 		; Input:
@@ -52,5 +52,12 @@ class mem {
 		if !(r:=DllCall("Kernel32.dll\VirtualProtect", "Ptr", lpAddress, "Ptr", dwSize, "Uint", flNewProtect, "Uint*", lpflOldProtect)) ; If the function fails, the return value is zero. 
 			xlib.exception("VirtualProtect failed to apply new memory protection: . " flNewProtect . " at adress: " . lpAddress . " (" . dwBytes . " bytes).",,-2)
 		return lpflOldProtect
+	}
+	rawPut(raw32,raw64){	; For writing binary code to memory.
+		local k, i, bin, raw
+		bin:=xlib.mem.virtualAlloc((raw:=(A_PtrSize==4?raw32:raw64)).length()*4)
+		for k, i in raw
+			NumPut(i,bin+(k-1)*4,"Int")
+		return bin
 	}
 }

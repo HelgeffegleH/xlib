@@ -3,8 +3,8 @@ ctId:=DllCall("Kernel32.dll\GetCurrentThreadId","Uint")
 mbctr:=0
 Loop
 	ToolTip("The script is running: " A_TickCount "`nScript thread Id: " ctId "`nPress F1 to show a MsgBox`nEsc to exit script.") , Sleep(10)
-F1::wMsgBox("Hello from MsgBox in new thread!", "xMsgBox #" (++mbctr) , 0x40, func("myCallback").bind(mbctr))
-return
+F1::wMsgBox("Hello from MsgBox in new thread!", "xMsgBox #" (++mbctr) " @ " A_TickCount, 0x40+[0,1,2,4,6][random(1,5)], func("myCallback").bind(mbctr))
+
 esc::exitapp
 
 myCallback(mbNumber,n,ref){
@@ -95,14 +95,17 @@ class xMsgBox extends xlib.ui.taskHandler {
 		; Url:
 		;	- https://msdn.microsoft.com/en-us/library/windows/desktop/aa366887(v=vs.85).aspx 	(VirtualAlloc function)
 		;	- https://msdn.microsoft.com/en-us/library/windows/desktop/aa366786(v=vs.85).aspx 	(Memory Protection Constants)
-		local k, i, raw
 		static flProtect:=0x40, flAllocationType:=0x1000 ; PAGE_EXECUTE_READWRITE ; MEM_COMMIT	
 		static raw32:=[]
 		static raw64:=[3968026707,1368082464,1233863688,1099648024,3414771728,335530289,1209811849,1528874115,2425393347,2425393296,2425393296,2425393296]
-		bin:=DllCall("Kernel32.dll\VirtualAlloc", "Uptr",0, "Ptr", (raw:=A_PtrSize==4?raw32:raw64).length()*4, "Uint", flAllocationType, "Uint", flProtect, "Ptr")
-		for k, i in raw
-			NumPut(i,bin+(k-1)*4,"Int")
+		static bin
+		if !bin
+			bin:=xlib.mem.rawPut(raw32,raw64)
 		return bin
 	}
-	static pmb:=xMsgBox.mbBin()
+	pmb {
+		get{
+			return xMsgBox.mbBin()
+		}
+	}
 }
