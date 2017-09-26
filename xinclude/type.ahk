@@ -34,7 +34,7 @@ class double extends xlib.float {
 ;<< uptr >>
 class uptr extends xlib.type{
 	min:=A_PtrSize=4 ? 			 0 : -9223372036854775808
-	max:=A_PtrSize=4 ? -4294967296 :  9223372036854775807
+	max:=A_PtrSize=4 ?  4294967296 :  9223372036854775807
 	__new(val,ptr:=""){
 		base.__new(val,"Uptr",ptr)
 	}
@@ -42,7 +42,7 @@ class uptr extends xlib.type{
 ;<< ptr >>
 class ptr extends xlib.type{
 	min:=A_PtrSize=4 ? -2147483648 : -9223372036854775808
-	max:=A_PtrSize=4 ? -2147483647 :  9223372036854775807
+	max:=A_PtrSize=4 ?  2147483647 :  9223372036854775807
 	__new(val,ptr:=""){
 		base.__new(val,"Ptr",ptr)
 	}
@@ -147,10 +147,16 @@ class type {
 		this.type:=type
 		this.val:=val
 	}
+	setCleanUpFunction(cleanUpFn){
+		; See struct cleanUpFn
+		this.cleanUpFn:=xlib.verifyCallback(cleanUpFn)
+	}
 	outOfBounds(num){
 		return num<this.min || num>this.max
 	}
 	__Delete(){
+		if this.cleanUpFn
+			this.cleanUpFn.Call(this)
 		if !this.isStructMember	; Structs free their members.
 			xlib.mem.globalFree(this.ptr)
 	}
