@@ -12,7 +12,7 @@
 		;	  suffixWA, if false (0) the fn name is not suffixed with W or  A  depending  on
 		; 	  A_IsUnicode,  if  true (1) the fn name is always suffixed, if this parameter is
 		; 	  (-1), the fn name is suffixed if the first attempt to get the address fails.
-		local dll, fnPtr, k, sf
+		local dll, fnPtr
 		if IsObject(lib)
 			dll:=lib[1]
 		if !dll
@@ -43,8 +43,5 @@
 		; Returns previous memory settings and set new to PAGE_READONLY
 		static PAGE_READONLY:=0x02
 		return xlib.mem.virtualProtect(ptr,size,PAGE_READONLY)
-	}
-	exception(p*){
-		return xlib.exception(p*)
 	}
 }

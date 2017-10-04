@@ -3,8 +3,8 @@
 ; then build struct:
 ;					myStruct.build(	 ["type",value[,"memberName"]]
 ;									,["Uint",37, "theNumber"]
-;									,["Ptr",0,"opt_ptr"])
 ;									,["pad",A_PtrSize=4?0:4]
+;									,["Ptr",0,"opt_ptr"])
 ;									,["Ptr",x, "thePointer"])
 ; Types are the usual numput/dllcall types, "ptr", "int" .... and "pad", to pad value bytes. Note: not "str". Todo, add type = "strbuf"
 ; Change member values, myStruct.Set("memberName", value)
@@ -32,7 +32,7 @@ class struct{
 			this.add(member*)
 	}
 	add(type,val,memberName:=""){
-		local size, typeObj,size
+		local size, typeObj
 		if (type="pad"){
 			this.offset+=val
 			return
@@ -81,6 +81,7 @@ class struct{
 		}
 	}
 	__Delete(){
+		; Msgbox("Deleting struct: " this.name) ; db
 		if this.cleanUpFn
 			this.cleanUpFn.Call(this)	; It seems ok to call func / bound func object with excessive amount paramters. If this changes, it needs to be handled here ;<< note >>
 		xlib.mem.globalFree(this.ptr)
