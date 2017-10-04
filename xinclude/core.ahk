@@ -565,7 +565,7 @@
 		static TP_CALLBACK_PRIORITY_NORMAL:=1
 		static sizeOf_TP_CALLBACK_ENVIRON_V1 := A_PtrSize == 4 ? 32 : 64	; The size depends on the os version.	(This is for Vista)
 		static sizeOf_TP_CALLBACK_ENVIRON_V3 := A_PtrSize == 4 ? 40 : 72	;										(This is for >vista)
-		envVersion := xlib.getVersion()
+		envVersion := xlib.getEnvironmentVersion()
 		pcbe := xlib.mem.globalAlloc( envVersion == 1 ? sizeOf_TP_CALLBACK_ENVIRON_V1 : sizeOf_TP_CALLBACK_ENVIRON_V3)
 		NumPut(envVersion, pcbe+0, 0, "Uint")																		; CallbackEnviron->Version
 		if (envVersion == 3){
@@ -653,9 +653,9 @@
 			TP_CALLBACK_PRIORITY_NORMAL 	(2)	The callback should run at normal priority.
 			TP_CALLBACK_PRIORITY_INVALID	(3)
 		*/
-		local envVersion := xlib.getVersion()
 		if Priority < 0 || Priority > 2
-			xlib.exception("Invalid Priority value: " Priority ". Priority must be in 0, 1 or 2.")
+			xlib.exception("Invalid Priority value: " Priority ". Priority must be 0, 1 or 2.")
+		local envVersion := xlib.getEnvironmentVersion()
 		if (envVersion == 3){
 			NumPut(Priority,	pcbe+0, A_PtrSize == 4 ? 32 : 60, "Uint")											; CallbackEnviron->CallbackPriority
 		else
