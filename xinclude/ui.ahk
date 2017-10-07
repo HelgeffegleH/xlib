@@ -25,7 +25,7 @@
 		if (!fnPtr && suffixWA==-1)
 			fnPtr:=DllCall("Kernel32.dll\GetProcAddress", "Ptr", dll, "AStr", fn . (A_IsUnicode ? "W" : "A"), "Ptr")
 		if !fnPtr
-			xlib.exception("Failed to get procedure adress: " fn,,-1)
+			xlib.exception("Failed to get procedure address: " fn,,-1)
 		if free ; This is probably not wanted.
 			this.freeLibrary(dll)
 		return fnPtr

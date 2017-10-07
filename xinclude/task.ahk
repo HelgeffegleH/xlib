@@ -283,7 +283,7 @@
 		; params struct	
 		params.build(	 ["Ptr",	udf.pointer,			"userStruct"		]		; pointer to the user struct.
 						,["Ptr",	pPostMessage,			"pPostMessage"		]		;
-						,["Ptr",	msgWin.hwnd,			"hwnd"				]		; The mesage is posted to the msgWin window.
+						,["Ptr",	msgWin.hwnd,			"hwnd"				]		; The message is posted to the msgWin window.
 						,["Ptr",	&this,					"this"				]		; See callbackReciever.
 						,["Ptr",	callbackNumber,			"callbackNumber"	]		; The threads index, internal.
 						,["Uint",	this.callbackMsgNumber, "callbackMsgNumber"	])		; Defined at the top of this file.

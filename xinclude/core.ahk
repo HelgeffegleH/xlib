@@ -436,7 +436,7 @@
 		;	- If the function succeeds, it returns TRUE. If the function fails, it returns FALSE.
 		if !DllCall("Kernel32.dll\SetThreadpoolThreadMinimum", "Ptr", ptpp, "Uint", cthrdMic)
 			xlib.exception("SetThreadpoolThreadMinimum failed for minimum: " cthrdMic) 
-		return
+		return true
 	}
 	
 	;	<< Callback environment >>
@@ -592,7 +592,7 @@
 		numput(pfng, 	pcbe+0,	A_PtrSize == 4 ? 12 : 24, "ptr")
 		return
 	}
-	SetThreadpoolCallbackLibrary(pcbe, mod){
+	setThreadpoolCallbackLibrary(pcbe, mod){
 		; Url:
 		;	- https://msdn.microsoft.com/en-us/library/windows/desktop/ms686258(v=vs.85).aspx (SetThreadpoolCallbackLibrary function)
 		; Parameters:
@@ -656,7 +656,7 @@
 		if Priority < 0 || Priority > 2
 			xlib.exception("Invalid Priority value: " Priority ". Priority must be 0, 1 or 2.")
 		local envVersion := xlib.getEnvironmentVersion()
-		if (envVersion == 3){
+		if (envVersion == 3)
 			NumPut(Priority,	pcbe+0, A_PtrSize == 4 ? 32 : 60, "Uint")											; CallbackEnviron->CallbackPriority
 		else
 			xlib.exception(A_ThisFunc " not supported for this OS. Specifically, " envVersion)
