@@ -12,7 +12,6 @@
 	}
 	restartAllTasks(){
 		; User should check that no threads are running before calling this methods. Exception on failure.
-		local k, hThread
 		if this.isAnyThreadRunning()		; Verify no threads still running. 
 			xlib.exception("Cannot restart all tasks before all task finished.",,-1)
 		for k in this.binArr
@@ -99,7 +98,6 @@
 		return xlib.core.thread.resumeThread(this.thHArr.get(ind))
 	}
 	terminateAllThreads() {
-		local k, th
 		if this.thHArr.getLength()
 			for k, tH in this.thHArr
 				xlib.core.thread.terminateThread(tH), xlib.code.closeHandle(tH)
