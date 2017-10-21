@@ -5,8 +5,6 @@
 	exception(msg,r,depth,output){
 		Critical ; ?
 		msg.="`n`nErrorLevel: " . ErrorLevel . "`nLast error: " . this.formatLastError() . (IsObject(r) ? "`nFunction returned: " . r[1] : "`nNo return value specified.") . this.getCallStack()
-		if (cleanUp==1)
-			this.cleanUp()
 		this.lastError:=Exception(msg,-abs(depth)-3) ; -3 to never show inside error class.
 		if (output="string"){
 			this.lastError :=	  "Error: " 	. this.lastError.Message 
@@ -21,6 +19,7 @@
 		;	- https://msdn.microsoft.com/en-us/library/windows/desktop/ms679351(v=vs.85).aspx (FormatMessage function)
 		; 
 		local msg
+		local lpBuffer:=0 ; avoids #warn all message. 
 		static FORMAT_MESSAGE_ALLOCATE_BUFFER:=0x00000100
 		static FORMAT_MESSAGE_FROM_SYSTEM:=0x00001000
 		if (msgn="")
