@@ -1,4 +1,4 @@
-﻿class taskHandler {
+﻿class threadHandler {
 	static callbackMsgNumber:=0x5537
 	;<< new >>
 	__new(maxTasks:=8){
@@ -10,27 +10,14 @@
 		this.startOptions:=[]
 		this.autoReleaseCallbackStructAfterCallback:=[] ; See autoReleaseCallbackStruct
 	}
-	getTask(ind){
-		; Returns a an object on the form:
-		; {pBin:pBin,pArgs:pArgs[,start:bool,stackSize:stackSize]}
-		; where,
-		;		pBin is a pointer to an executable binary buffer. Alocate memory with virtualAlloc()
-		; 		pArgs is a pointer to the arguments which will be "passed to pBin"
-		;		start, set to true to start the task when it is created.
-		;		stackSize, size of the stack allocated for pBin, set to zero for default.
-		; return -1 to indicate that all tasks are defined.
-		throw Exception("getTask not implemented.",-1)
-	}
-	;<< note >>
 	restartAllTasks(){
 		; User should check that no threads are running before calling this methods. Exception on failure.
 		local k, hThread
 		if this.isAnyThreadRunning()		; Verify no threads still running. 
-			xlib.exception("Cannot restart all tasks before all task finished.",,-1)	; This might be a bit harsh. Consider it.					<----- NOTE
+			xlib.exception("Cannot restart all tasks before all task finished.",,-1)
 		for k in this.binArr
 			this.restartTask(k)
 	}
-	
 	restartTask(ind){
 		this.cleanUpThread(ind)
 		if this.callback
@@ -38,9 +25,6 @@
 		else
 			this.createTask(this.binArr.Get(ind),this.argArr.Get(ind),this.startOptions[ind],this.stackSizes[ind], ind)
 	}
-	
-
-	
 	;<<Task methods>>
 	registerTaskCallback(pBin,pArgs,callbackFunction,start:=true,stackSize:=0,restarting:=false){
 		; "Return values" from task function pBin, should be put in pArgs
@@ -62,7 +46,6 @@
 		this.createTask(pCb,this.callbackStructs[callbackNumber].params.pointer,start,stackSize,restarting)
 		return
 	}
-
 	createTask(pBin,pArgs,start:=true,stackSize:=0,restarting:=false){
 		; pBin, pointer to binary buffer with 
 		; pArgs, pointer to the arguments for the binary code
@@ -77,12 +60,11 @@
 		} else {
 			ind:=restarting
 		}
-		threadData := xlib.core.createThread(pBin, pArgs, 0, stackSize, start ? 0 : CREATE_SUSPENDED) ; For reference, threadData := {hThread:th,threadId:lpThreadId}
+		threadData := xlib.core.thread.createThread(pBin, pArgs, 0, stackSize, start ? 0 : CREATE_SUSPENDED) ; For reference, threadData := {hThread:th,threadId:lpThreadId}
 		if !restarting{
 			this.thHArr.Push(threadData.hThread)
 			this.tIdArr.Push(threadData.threadId)
-		} else { ; FIX THIS
-			msgbox("hi" threadData.hThread  "`n" threadData.threadId "`n" ind)
+		} else { 
 			this.thHArr.Set(ind,threadData.hThread)
 			this.tIdArr.Set(ind,threadData.threadId)
 		}
@@ -92,7 +74,7 @@
 		local k, hThread
 		if this.thHArr.getLength()
 			for k, hThread in this.thHArr
-				xlib.core.resumeThread(hThread)
+				xlib.core.thread.resumeThread(hThread)
 		else
 			xlib.exception("No thread handles available.",,-1,"Warn")
 		return 
@@ -114,20 +96,20 @@
 		this.callbackFunctions[ind]:=callback
 	}
 	startTask(ind){
-		return xlib.core.resumeThread(this.thHArr.get(ind))
+		return xlib.core.thread.resumeThread(this.thHArr.get(ind))
 	}
 	terminateAllThreads() {
 		local k, th
 		if this.thHArr.getLength()
 			for k, tH in this.thHArr
-				xlib.core.terminateThread(tH), xlib.code.closeHandle(tH)
+				xlib.core.thread.terminateThread(tH), xlib.code.closeHandle(tH)
 		return
 	}
 	terminateTask(ind){
 		local th
 		if !th:=this.thHArr.get(ind)
 			xlib.exception(A_ThisFunc " failed, no thread running for task: " ind,,-1)
-		return xlib.core.terminateThread(tH)
+		return xlib.core.thread.terminateThread(tH)
 	}
 	autoReleaseAllCallbackStructs(bool:=true){
 		; See autoReleaseAllCallbackStructs()
@@ -145,7 +127,7 @@
 		; Close thread handle and delete handle and id.
 		local hThread
 		if hThread:=this.thHArr.Get(ind) {
-			xlib.core.closeHandle(hThread)
+			xlib.core.misc.closeHandle(hThread)
 			this.thHArr.Set(ind,0)
 			this.tIdArr.Set(ind,0)
 		}
@@ -160,7 +142,7 @@
 		static WAIT_TIMEOUT:=	0x00000102
 		local r
 		
-		r:=xlib.core.waitForMultipleObjects(this.thHArr.getLength(), this.thHArr.getArrPtr(),waitForAll,ms)
+		r:=xlib.core.wait.waitForMultipleObjects(this.thHArr.getLength(), this.thHArr.getArrPtr(),waitForAll,ms)
 		if !waitForAll
 			return r ; Handle return in waitForAnyTask()
 		if (r==WAIT_OBJECT_0)
@@ -175,7 +157,7 @@
 		; Return -1 if the wait times out.
 		static WAIT_TIMEOUT:=0x00000102
 		local r
-		r:=xlib.core.waitForAllTasks(ms,false)
+		r:=xlib.core.wait.waitForAllTasks(ms,false)
 		if (r==WAIT_TIMEOUT)
 			return -1
 		return r+1
@@ -186,7 +168,7 @@
 		static WAIT_OBJECT_0:=	0x00000000
 		static WAIT_TIMEOUT:=	0x00000102
 		local r
-		r:=xlib.core.waitForSingleObject(this.thHArr.get(ind),ms)
+		r:=xlib.core.wait.waitForSingleObject(this.thHArr.get(ind),ms)
 		if (r==WAIT_OBJECT_0)
 			return true
 		else if (r==WAIT_TIMEOUT)
@@ -239,12 +221,12 @@
 	}
 	OnMessageReg() {
 		; Set up for recieving callback messages.
-		;if xlib.ui.taskHandler.isRegistredForCallbacks
+		;if xlib.ui.threadHandler.isRegistredForCallbacks
 		;	return
 		local msgFn
-		msgFn:=xlib.ui.taskHandler.msgFn:=ObjBindMethod(xlib.ui.taskHandler,"callbackReciever")
+		msgFn:=xlib.ui.threadHandler.msgFn:=ObjBindMethod(xlib.ui.threadHandler,"callbackReciever")
 		OnMessage(this.callbackMsgNumber, msgFn)
-		xlib.ui.taskHandler.isRegistredForCallbacks:=true
+		xlib.ui.threadHandler.isRegistredForCallbacks:=true
 	}
 	makeCallbackStruct(pBin,pArgs,callbackNumber){
 		/*
@@ -320,7 +302,7 @@
 		local k, hThread
 		try {
 			for k, hThread in this.thHArr
-				xlib.core.closeHandle(hThread)
+				xlib.core.misc.closeHandle(hThread)
 		}
 	}
 }

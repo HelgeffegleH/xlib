@@ -18,8 +18,7 @@ wMsgBox(Text:="",Title:="",Options:="",callback:=""){
 	xMB.Destroy()	; Ensures self references are released when the callback returns.
 	return
 }
-
-class xMsgBox extends xlib.ui.taskHandler {
+class xMsgBox extends xlib.ui.threadHandler {
 	
 	__new(Options:="", Title:="", Text:="",showOnCreate:=true,callback:=""){
 		base.__new(1)
