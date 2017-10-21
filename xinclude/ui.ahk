@@ -2,8 +2,8 @@
 	; User classes and methods.
 	
 	
-	#include task.ahk	; For "manual" thread handling.
-	#include pool.ahk	; For thread pooling.
+	#include threadHandler.ahk			; For "manual" thread handling.
+	#include threadPool.ahk				; For thread pooling.
 	
 	; Misc user methods
 	getFnPtrFromLib(lib,fn,suffixWA:=false,free:=false){

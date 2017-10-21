@@ -1,22 +1,19 @@
-﻿; Todo, 	
-;		use threadFunc for callbacks. see note in task.ahk
-;		cleanUpFn for "type"			
-;		Much more
-class xlib {
+﻿class xlib {
 	static projectName:="xlib"
 	static extendedExceptionInfo:=true
-	;<< includes >>
-	#include xinclude\error.ahk
-	#include xinclude\misc.ahk
-	#include xinclude\malloc.ahk
-	#include xinclude\core.ahk
-	#include xinclude\ccore.ahk
-		
-	#include xinclude\typeArr.ahk
-	#include xinclude\type.ahk
-	#include xinclude\struct.ahk
-	#include xinclude\ui.ahk
-	getClassPath(){
-		return RegExReplace(this.__Class,"(.*)(\..*)","$1")
-	}
+	
+	#include xinclude\error.ahk									;	Error handling
+	#include xinclude\misc.ahk                                  ;	Misc functions
+	#include xinclude\malloc.ahk                                ;	Memory allocation and freeing
+	#include xinclude\core.ahk                                  ;	Core api wrapper
+	#include xinclude\poolbase.ahk                              ;	Pool structure object wrappers
+	#include xinclude\ccore.ahk                                 ;	Compiled core functions. Script callbacks
+		                                                        ;
+																;	Primitive data type handling, Types are the "regular" dllcall types, char, short, int, ptr, ...
+	#include xinclude\typeArr.ahk                               ;	"Type" array implementation. 
+	#include xinclude\type.ahk                                  ;	Single type value objects.
+	#include xinclude\struct.ahk                                ;	Struct builder.
+	
+	#include xinclude\ui.ahk                                    ;	ui - User interface - object wrappers around the above, intended for direct use.
+	
 }
