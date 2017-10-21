@@ -231,6 +231,8 @@ class FILETIME {
 			this.dwHighDateTime:=high
 		} else if (time!="") {
 			this.time:=time
+		} else {
+			xlib.exception("FILETIME error, invalid input, time: " time ", low: " low ", high: " high ".",,-2)
 		}
 	}
 	pointer{
@@ -263,7 +265,7 @@ class FILETIME {
 			return this.dwHighDateTime
 		}
 	}
-	dwLowDateTime{
+	dwLowDateTime{	; "full names"
 		set{
 			NumPut(value,this.mem+0,0,"Uint")
 			return 
