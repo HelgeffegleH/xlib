@@ -6,6 +6,11 @@
 	#include threadPool.ahk				; For thread pooling.
 	
 	; Misc user methods
+	nLogicalCores(){
+		; Returns the number logical processor cores on the system.
+		static nCores := envget("Number_Of_Processors")
+		return nCores
+	}
 	getFnPtrFromLib(lib,fn,suffixWA:=false,free:=false){
 		; lib, path to the library  / dll where the function resides
 		; fn, name of the function.
