@@ -11,13 +11,13 @@ class poolbase {
 			this.cleanUpFn:=cleanUpFn
 		}
 		cleanUp(p*){					; Must be implemented
-			xlib.exception("Not implemented.")
+			xlib.exception('Not implemented. Note: AHK "delays" throws from within __delete. This message may be delayed.')
 		}
 		; Meta functions
 		__delete(){
 			if this.cleanUpFn			; User defined clean up function.
 				this.cleanUpFn.call(this)
-			this.cleanup()				; Class defined clean up function.
+			this.cleanUp()				; Class defined clean up function.
 		}
 		; Error
 		; Yeilds an error for properties which can only be set once.
@@ -39,7 +39,7 @@ class poolbase {
 		__new(params*){
 			if !this.initFunc
 				xlib.exception("Classes extending TP_BASE must specify an initFunc.")
-			if !this[this.TPStructName] := this.initFunc(params*)								; Initialises the structure. Sets the TP property.
+			if !this[this.TPStructName] := this.initFunc(params*)						; Initialises the structure. Sets the TP property.
 				xlib.exception("Initialising of the structure failed. Struct: " this.TPStructName ".")
 		}
 		getPointer(){
@@ -109,13 +109,8 @@ class poolbase {
 		}
 		; Clean up
 		cleanUp(p*){
-			this.destroy()
-		}
-		destroy(){
-			; Destroys the pool, the callback environment and clean-up group
-			;this.ptpcg:= "" ; xlib.core.pool.closeThreadpoolCleanupGroup(this.ptpcg)   - closeThreadpoolCleanupGroupMembers
-			;this.pcbe:="" 	; xlib.core.pool.destroyThreadpoolEnvironment(this.pcbe)
-			this.ptpp:="" 	; xlib.core.pool.closeThreadpool(this.ptpp)
+			; Destroys the pool
+			this.ptpp:="" 
 		}
 	}
 		;	<< TP_CALLBACK_ENVIRON - Callback environment >>
@@ -145,13 +140,15 @@ class poolbase {
 		callbackLibrary{
 			set{
 				xlib.core.pool.setThreadpoolCallbackLibrary(this.pcbe, value)		; value = (void*) mod
+				return value
 			}
 		}
 		pool {																		; The associated pool - can only be set once
 			set{                                                        			
 				if !this.poolIsSet {                                    			
 					xlib.core.pool.setThreadpoolCallbackPool(this.pcbe, value)		; value = ptpp
-					return this.poolIsSet:=true
+					this.poolIsSet:=true
+					return value
 				}
 				this.error("pool", value, 0)
 			}
@@ -161,7 +158,7 @@ class poolbase {
 			set {
 				this.ptpcg := value
 				this.pfng := pfng
-				xlib.core.pool.setThreadpoolCallbackCleanupGroup(this.pcbe, ptpcg, pfng)	; Note: The function doesn't return a value.
+				xlib.core.pool.setThreadpoolCallbackCleanupGroup(this.pcbe, this.ptpcg, pfng)	; Note: The function doesn't return a value.
 				return this.cleanUpGroup
 			} get {
 				return {ptpcg:this.ptpcg, pfng:this.pfng}
@@ -355,9 +352,9 @@ class poolbase {
 		static TPStructName := "pti"						
 		pti {															; timer pointer, invokes base property
 			set {
-				return this.cbptr := value
+				return this.TP := value
 			} get {
-				return this.cbptr	
+				return this.TP
 			}
 		}
 	}
@@ -384,9 +381,9 @@ class poolbase {
 		static TPStructName := "pwa"									
 		pwa {															; wait pointer, invokes base property
 			set {
-				return this.cbptr := value
+				return this.TP := value
 			} get {
-				return this.cbptr	
+				return this.TP
 			}
 		}
 	}
