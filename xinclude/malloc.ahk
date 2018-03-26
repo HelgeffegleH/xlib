@@ -48,9 +48,9 @@ class mem {
 	virtualProtect(lpAddress,dwSize,flNewProtect){
 		; Url:
 		;	- msdn.microsoft.com/en-us/library/windows/desktop/aa366898(v=vs.85).aspx (VirtualProtect function)
-		local r, lpflOldProtect
+		local r, lpflOldProtect:=0
 		if !(r:=DllCall("Kernel32.dll\VirtualProtect", "Ptr", lpAddress, "Ptr", dwSize, "Uint", flNewProtect, "Uint*", lpflOldProtect)) ; If the function fails, the return value is zero. 
-			xlib.exception("VirtualProtect failed to apply new memory protection: . " flNewProtect . " at adress: " . lpAddress . " (" . dwBytes . " bytes).",,-2)
+			xlib.exception("VirtualProtect failed to apply new memory protection: . " flNewProtect . " at adress: " . lpAddress . " (" . dwSize . " bytes).",,-2)
 		return lpflOldProtect
 	}
 	rawPut(raw32,raw64){	; For writing binary code to memory.
