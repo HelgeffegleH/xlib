@@ -11,79 +11,79 @@
 class float extends xlib.type {
 	min:="-inf"
 	max:="inf"
-	__new(val,ptr:="",type:="float"){
+	__new(val,ptr:="",type:="float") {
 		base.__new(val,type,ptr)
 	}
-	outOfBounds(val){
+	outOfBounds(val) {
 		static oobTest
 		if !oobTest
 			VarSetCapacity(oobTest,this.size,0)
 		NumPut(val,oobTest,this.type)
 		return InStr(NumGet(oobTest,this.type),"inf") || InStr(val,"nan")
 	}
-	outOfBoundsException(val){
+	outOfBoundsException(val) {
 		throw Exception("Value out of bounds: " val,-2)
 	}
 }
 ;<< double >>
 class double extends xlib.float {
-	__new(val,ptr:=""){
+	__new(val,ptr:="") {
 		base.__new(val,ptr,"double")
 	}
 }
 ;<< uptr >>
-class uptr extends xlib.type{
+class uptr extends xlib.type {
 	min:=A_PtrSize=4 ? 			 0 : -9223372036854775808
 	max:=A_PtrSize=4 ?  4294967296 :  9223372036854775807
-	__new(val,ptr:=""){
+	__new(val,ptr:="") {
 		base.__new(val,"Uptr",ptr)
 	}
 }
 ;<< ptr >>
-class ptr extends xlib.type{
+class ptr extends xlib.type {
 	min:=A_PtrSize=4 ? -2147483648 : -9223372036854775808
 	max:=A_PtrSize=4 ?  2147483647 :  9223372036854775807
-	__new(val,ptr:=""){
+	__new(val,ptr:="") {
 		base.__new(val,"Ptr",ptr)
 	}
 }
 ;<< int64 >>
-class int64 extends xlib.type{
+class int64 extends xlib.type {
 	min:=-9223372036854775808
 	max:=9223372036854775807
-	__new(val,ptr:=""){
+	__new(val,ptr:="") {
 		base.__new(val,"int64",ptr)
 	}
 }
 ;<< uint >>
-class uint extends xlib.type{
+class uint extends xlib.type {
 	min:=0
 	max:=4294967295
-	__new(val,ptr:=""){
+	__new(val,ptr:="") {
 		base.__new(val,"Uint",ptr)
 	}
 }
 ;<< int >>
-class int extends xlib.type{
+class int extends xlib.type {
 	min:=-2147483648
 	max:=2147483647
-	__new(val,ptr:=""){
+	__new(val,ptr:="") {
 		base.__new(val,"Int",ptr)
 	}
 }
 ;<< ushort >>
-class ushort extends xlib.type{
+class ushort extends xlib.type {
 	min:=0
 	max:=65535
-	__new(val,ptr:=""){
+	__new(val,ptr:="") {
 		base.__new(val,"Ushort",ptr)
 	}
 }
 ;<< short >>
-class short extends xlib.type{
+class short extends xlib.type {
 	min:=-32768
 	max:=32767
-	__new(val,ptr:=""){
+	__new(val,ptr:="") {
 		base.__new(val,"Short",ptr)
 	}
 }
@@ -91,7 +91,7 @@ class short extends xlib.type{
 class uchar extends xlib.type {
 	min:=0
 	max:=255
-	__new(val,ptr:=""){
+	__new(val,ptr:="") {
 		base.__new(val,"Uchar",ptr)
 	}
 }
@@ -99,47 +99,45 @@ class uchar extends xlib.type {
 class char extends xlib.type {
 	min:=-128
 	max:=127
-	__new(val,ptr:=""){
+	__new(val,ptr:="") {
 		base.__new(val,"Char",ptr)
 	}
 }
 ;<< strbuf >>
-class strbuf extends xlib.type{
+class strbuf extends xlib.type {
 	; specify len, the maximum string length that the buffer can hold for the specified encoding, enc. Null terminator excluded.
-	__new(len,enc:=""){
+	__new(len,enc:="") {
 		this.len:=len
 		this.size:=(len+1)*(enc="utf-16" || enc="cp1200" ? 2 : 1) ; Deduced from the manual. 
 		this.ptr:=xlib.mem.globalAlloc(this.size)
 		this.enc:=enc
 	}
-	str{
-		get{
-			return StrGet(this.ptr+0,this.enc)
-		}
-		set{
+	str {
+		get {
+			return StrGet(this.ptr,this.enc)
+		} set {
 			if this.outOfBounds(value)
 				this.outOfBoundsException(value)
-			StrPut(value,this.ptr+0,this.enc)
+			StrPut(value,this.ptr,this.enc)
 		}
 	}
-	val{
-		set{
+	val {
+		set {
 			this.str:=value
-		}
-		get{
+		} get {
 			return this.str
 		}
 	}
-	outOfBoundsException(value){
+	outOfBoundsException(value) {
 		xlib.exception("String to long: " strlen(value) ". Maximum length: " this.len,,-2)
 	}
-	outOfBounds(val){
+	outOfBounds(val) {
 		return (StrLen(val)+1) * (this.enc="utf-16" || this.enc="cp1200" ? 2 : 1)  > this.size
 	}
 }
 ;<< type >>
 class type {
-	__new(val,type,ptr:=""){
+	__new(val,type,ptr:="") {
 		if !(this.size:=this.sizeof(type))
 			xlib.exception("Invalid type: " type)
 		this.ptr:= ptr ? ptr : xlib.mem.globalAlloc(this.size)
@@ -147,66 +145,63 @@ class type {
 		this.type:=type
 		this.val:=val
 	}
-	setCleanUpFunction(cleanUpFn){
+	setCleanUpFunction(cleanUpFn) {
 		; See struct cleanUpFn
 		this.cleanUpFn:=xlib.verifyCallback(cleanUpFn)
 	}
-	outOfBounds(num){
+	outOfBounds(num) {
 		return num<this.min || num>this.max
 	}
-	__Delete(){
+	__Delete() {
 		if this.cleanUpFn
 			this.cleanUpFn.Call(this)
 		if !this.isStructMember	; Structs free their members.
 			xlib.mem.globalFree(this.ptr)
 	}
 	pointer {	; The pointer to the memory space
-		set{
+		set {
 			xlib.exception("Access denied.",,-2)
-		}
-		get{
+		} get {
 			return this.ptr
 		}
 	}
 	; Max / min values of the type.
-	max{	
-		set{
+	max {	
+		set {
 			this.ub:=value
-		}
-		get{
+		} get {
 			if (this.ub="")
 				xlib.exception("Maximum value not defined for: " this.type,,-2)
 			return this.ub
 		}
 	}
-	min{
-		set{
+	min {
+		set {
 			this.lb:=value
-		}
-		get{
+		} get {
 			if (this.lb="")
 				xlib.exception("Minimum value not defined for: " this.type,,-2)
 			return this.lb
 		}
 	}
-	val{ ; The value. Get it by myRef.val, set via myRef.val:=...
-		set{
+	val { ; The value. Get it by myRef.val, set via myRef.val:=...
+		set {
 			if this.outOfBounds(value)
 				this.outOfBoundsException(value)
-			return NumPut(value,this.ptr+0,this.type)
-		}
-		get{
-			local value:=NumGet(this.ptr+0,this.type)
+			return NumPut(value,this.ptr,this.type)
+		} get {
+			local value:=NumGet(this.ptr,this.type)
 			if this.outOfBounds(value)
 				this.outOfBoundsException(value)
 			return value
 		}
 	}
-	outOfBoundsException(val){ ; Standart error message
-		throw Exception("Value out of bounds: " val ". Expected value in range [" this.min "," this.max "]",-2)
+	outOfBoundsException(val) { ; Standart error message
+		xlib.Exception("Value out of bounds: " val ". Expected value in range [" this.min "," this.max "]",-3)
 	}
-	sizeof(type){
-		static sizeMap:={Ptr:A_PtrSize,Uptr:A_PtrSize,Uint:4,Int:4,Int64:8,Ushort:2,Short:2,Uchar:1,Char:1,Float:4,Double:8}
+	sizeof(type) {
+		static sizeMap := {	 Ptr : A_PtrSize, Uptr : A_PtrSize, Uint : 4, Int : 4, Int64 : 8, Uint64 : 8
+							,Ushort : 2, Short : 2, Uchar : 1, Char : 1, Float : 4, Double : 8}
 		if !sizeMap.haskey(type)
 			xlib.exception("Invalid type: " type ".",,-2)
 		return sizeMap[type]
@@ -224,9 +219,9 @@ class FILETIME {
 		DWORD dwHighDateTime;
 	} FILETIME, *PFILETIME;
 	*/
-	__new(time:=0,low:="",high:=""){
+	__new(time:=0,low:="",high:="") {
 		this.mem:=xlib.mem.globalAlloc(8)
-		if (low!="" && high!=""){
+		if (low!="" && high!="") {
 			this.dwLowDateTime:=low
 			this.dwHighDateTime:=high
 		} else if (time!="") {
@@ -235,63 +230,58 @@ class FILETIME {
 			xlib.exception("FILETIME error, invalid input, time: " time ", low: " low ", high: " high ".",,-2)
 		}
 	}
-	pointer{
-		get{
+	pointer {
+		get { 
 			return this.mem
 		}
 	}
-	time{
-		set{
+	time {
+		set {
 			this.dwLowDateTime	:= value << 32 >> 32
 			this.dwHighDateTime	:= value >> 32 		
-		}
-		get{
-			return NumGet(this.mem+0, 0, "Int64")
+		} get {
+			return NumGet(this.mem, 0, "Int64")
 		}
 	}
-	low{ ; cannot remember full names
-		set{
+	low { ; cannot remember full names
+		set {
 			this.dwLowDateTime:=value
-		}
-		get{
+		} get {
 			return this.dwLowDateTime
 		}
 	}
-	high{
-		set{
+	high {
+		set {
 			this.dwHighDateTime:=value
-		}
-		get{
+		} get {
 			return this.dwHighDateTime
 		}
 	}
-	dwLowDateTime{	; "full names"
-		set{
-			NumPut(value,this.mem+0,0,"Uint")
+	dwLowDateTime {	; "full names"
+		set {
+			NumPut(value,this.mem,0,"Uint")
 			return 
-		}
-		get{
-			return NumGet(this.mem+0,0,"Uint")
+		} get {
+			return NumGet(this.mem,0,"Uint")
 		}
 	}
-	dwHighDateTime{
-		set{
-			NumPut(value,this.mem+0,4,"Uint")
+	dwHighDateTime {
+		set {
+			NumPut(value,this.mem,4,"Uint")
 			return 
-		}
-		get{
-			return NumGet(this.mem+0,4,"Uint")
+		} get {
+			return NumGet(this.mem,4,"Uint")
 		}
 	}
-	__Delete(){
+	__Delete() {
 		xlib.mem.globalFree(this.mem)
 	}
 	; Misc, db purposes
-	systemTimeToFileTime(lpSystemTime, ByRef lpFileTime){
+	systemTimeToFileTime(lpSystemTime, ByRef lpFileTime) {
 		if !DllCall("Kernel32.dll\SystemTimeToFileTime", "Ptr", lpSystemTime, "Int64P", lpFileTime)
 			xlib.exception("SystemTimeToFileTime failed")
 	}
-	GetSystemTime(ByRef st){
+	GetSystemTime(ByRef st) {
 		VarSetCapacity(st,16,0)
 		DllCall("Kernel32.dll\GetSystemTime", "Ptr", &st)
 	}
