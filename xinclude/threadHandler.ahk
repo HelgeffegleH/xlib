@@ -100,7 +100,7 @@
 	terminateAllThreads() {
 		if this.thHArr.getLength()
 			for k, tH in this.thHArr
-				xlib.core.thread.terminateThread(tH), xlib.code.closeHandle(tH)
+				xlib.core.thread.terminateThread(tH), xlib.core.misc.closeHandle(tH)
 		return
 	}
 	terminateTask(ind){
@@ -219,12 +219,18 @@
 	}
 	OnMessageReg() {
 		; Set up for recieving callback messages.
-		;if xlib.ui.threadHandler.isRegistredForCallbacks
-		;	return
+		if xlib.ui.threadHandler.isRegistredForCallbacks
+			return
 		local msgFn
 		msgFn:=xlib.ui.threadHandler.msgFn:=ObjBindMethod(xlib.ui.threadHandler,"callbackReciever")
 		OnMessage(this.callbackMsgNumber, msgFn)
 		xlib.ui.threadHandler.isRegistredForCallbacks:=true
+	}
+	OnMessageUnReg(){	; unregister callbacks, needed to make script not persistent.
+		if !xlib.ui.threadHandler.isRegistredForCallbacks
+			return
+		OnMessage(this.callbackMsgNumber, xlib.ui.threadHandler.msgFn, 0)
+		xlib.ui.threadHandler.isRegistredForCallbacks:=false
 	}
 	makeCallbackStruct(pBin,pArgs,callbackNumber){
 		/*
@@ -277,7 +283,7 @@
 		static sizeOfudf:=A_PtrSize*2
 		local cbs
 		cbs:=this.callbackStructs[callbackNumber] ; convenience.
-		cbs.udf:= new xlib.struct(sizeOfudf, 	"taskCallbackUDF")
+		cbs.udf:= new xlib.struct(sizeOfudf, "taskCallbackUDF")
 		cbs.udf.build(	 ["Ptr",	pBin, 	"pudFn"		]								; udf struct
 						,["Ptr",	pArgs,	"pParams"	])
 		cbs.params.Set("userStruct", cbs.udf.pointer)									; Set userStruct member of params struct.
