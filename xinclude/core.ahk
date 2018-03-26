@@ -579,10 +579,10 @@ class core {
 			static sizeOf_TP_CALLBACK_ENVIRON_V3 := A_PtrSize == 4 ? 40 : 72	;										(This is for >vista)
 			envVersion := xlib.getEnvironmentVersion()
 			pcbe := xlib.mem.globalAlloc( envVersion == 1 ? sizeOf_TP_CALLBACK_ENVIRON_V1 : sizeOf_TP_CALLBACK_ENVIRON_V3)
-			NumPut(envVersion, pcbe+0, 0, "Uint")																		; CallbackEnviron->Version
+			NumPut(envVersion, pcbe, 0, "Uint")																		; CallbackEnviron->Version
 			if (envVersion == 3){
-				NumPut(TP_CALLBACK_PRIORITY_NORMAL,		pcbe+0, A_PtrSize == 4 ? 32 : 60, "Uint")						; CallbackEnviron->CallbackPriority
-				NumPut(sizeOf_TP_CALLBACK_ENVIRON_V3, 	pcbe+0, A_PtrSize == 4 ? 36 : 64, "Uint")						; CallbackEnviron->Size
+				NumPut(TP_CALLBACK_PRIORITY_NORMAL,		pcbe, A_PtrSize == 4 ? 32 : 60, "Uint")						; CallbackEnviron->CallbackPriority
+				NumPut(sizeOf_TP_CALLBACK_ENVIRON_V3, 	pcbe, A_PtrSize == 4 ? 36 : 64, "Uint")						; CallbackEnviron->Size
 			}
 			return pcbe
 		}
@@ -600,8 +600,8 @@ class core {
 			;	CallbackEnviron->CleanupGroup = CleanupGroup;
 			;	CallbackEnviron->CleanupGroupCancelCallback = CleanupGroupCancelCallback;
 			;
-			numput(ptpcg,	pcbe+0,	A_PtrSize == 4 ? 8  : 16, "ptr")
-			numput(pfng, 	pcbe+0,	A_PtrSize == 4 ? 12 : 24, "ptr")
+			numput(ptpcg,	pcbe,	A_PtrSize == 4 ? 8  : 16, "ptr")
+			numput(pfng, 	pcbe,	A_PtrSize == 4 ? 12 : 24, "ptr")
 			return
 		}
 		setThreadpoolCallbackLibrary(pcbe, mod){
@@ -641,7 +641,7 @@ class core {
 					CallbackEnviron->Pool = Pool;
 				}
 			*/
-			NumPut(ptpp, pcbe+0, A_PtrSize == 4 ? 4 : 8, "Ptr")												; CallbackEnviron->Pool
+			NumPut(ptpp, pcbe, A_PtrSize == 4 ? 4 : 8, "Ptr")												; CallbackEnviron->Pool
 			return
 		}
 		setThreadpoolCallbackPriority(pcbe, Priority:=1){
@@ -669,7 +669,7 @@ class core {
 				xlib.exception("Invalid Priority value: " Priority ". Priority must be 0, 1 or 2.")
 			local envVersion := xlib.getEnvironmentVersion()
 			if (envVersion == 3)
-				NumPut(Priority,	pcbe+0, A_PtrSize == 4 ? 32 : 60, "Uint")											; CallbackEnviron->CallbackPriority
+				NumPut(Priority,	pcbe, A_PtrSize == 4 ? 32 : 60, "Uint")											; CallbackEnviron->CallbackPriority
 			else
 				xlib.exception(A_ThisFunc " not supported for this OS. Specifically, " envVersion)
 			return
@@ -693,8 +693,8 @@ class core {
 			;				DWORD                      Private      : 30;
 			;			} s;
 			;	} u;
-			local Flags := numget(pcbe+0, A_PtrSize == 4 ?  28 : 56, "uint")	
-			numput(Flags | 1, pcbe+0, A_PtrSize == 4 ?  28 : 56, "uint")		; Set LongFunction = 1
+			local Flags := numget(pcbe, A_PtrSize == 4 ?  28 : 56, "uint")	
+			numput(Flags | 1, pcbe, A_PtrSize == 4 ?  28 : 56, "uint")		; Set LongFunction = 1
 		}
 		;<< Callback >>
 		;	CallbackMayRunLong
