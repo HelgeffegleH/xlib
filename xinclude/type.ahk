@@ -136,26 +136,20 @@ class strbuf extends xlib.type {
 	}
 }
 ;<< type >>
-class type {
+class type extends xlib.bases.cleanupBase {
 	__new(val,type,ptr:="") {
 		if !(this.size:=this.sizeof(type))
 			xlib.exception("Invalid type: " type)
 		this.ptr:= ptr ? ptr : xlib.mem.globalAlloc(this.size)
-		this.isStructMember:= ptr ? true : false
+		this.isStructMember := ptr ? true : false	; Structs free their members.
 		this.type:=type
 		this.val:=val
-	}
-	setCleanUpFunction(cleanUpFn) {
-		; See struct cleanUpFn
-		this.cleanUpFn:=xlib.verifyCallback(cleanUpFn)
 	}
 	outOfBounds(num) {
 		return num<this.min || num>this.max
 	}
-	__Delete() {
-		if this.cleanUpFn
-			this.cleanUpFn.Call(this)
-		if !this.isStructMember	; Structs free their members.
+	cleanUp(){ ; called "from" xlib.bases.cleanupBase.__Delete
+		if !this.isStructMember && isobject(xlib) && isobject(xlib.mem)	; Structs free their members.
 			xlib.mem.globalFree(this.ptr)
 	}
 	pointer {	; The pointer to the memory space

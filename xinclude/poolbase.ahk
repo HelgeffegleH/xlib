@@ -4,29 +4,8 @@
 ; 	TP_IO currently unavailable.
 ;	
 class poolbase {
-	
-	class cleanupObj {
-		; Methods
-		setCleanUpFunction(cleanUpFn){
-			this.cleanUpFn:=cleanUpFn
-		}
-		cleanUp(p*){					; Must be implemented
-			xlib.exception('Not implemented. Note: AHK "delays" throws from within __delete. This message may be delayed.')
-		}
-		; Meta functions
-		__delete(){
-			if this.cleanUpFn			; User defined clean up function.
-				this.cleanUpFn.call(this)
-			this.cleanUp()				; Class defined clean up function.
-		}
-		; Error
-		; Yeilds an error for properties which can only be set once.
-		error(key, value, gettable:=true){
-			xlib.exception(this.__class " cannot assign " value " to " key ".`nKey is already associated with " (gettable? "value: " this[key] : "a value") ".",,-1)
-		}
-	}
 		;<< TP_BASE >>
-	class TP_BASE extends xlib.poolbase.cleanupObj {
+	class TP_BASE extends xlib.bases.cleanupBase {
 		; Base class for structures:
 		; * TP_POOL
 		; * TP_CALLBACK_ENVIRON
@@ -45,10 +24,15 @@ class poolbase {
 		getPointer(){
 			return this.TP																; For clarity, method returns the stucture pointer
 		}
+		; Error
+		; Yeilds an error for properties which can only be set once.
+		error(key, value, gettable:=true){
+			xlib.exception(this.__class " cannot assign " value " to " key ".`nKey is already associated with " (gettable? "value: " this[key] : "a value") ".",,-1)
+		}
 		; Properties 
 		static TPStructName := "TP" 
-		TP {																			; PT_
-			set{                                                                        ; can only be set once, + set to "" to destroy
+		TP {																			; _TP
+			set {                                                                        ; can only be set once, + set to "" to destroy
 				if value == "" && this._TP {											; Clear the property to destroy or close the structure
 					if !this.closeFunc
 						xlib.exception("Classes extending TP_BASE must specify a closeFunc.")
@@ -59,7 +43,7 @@ class poolbase {
 					return this._TP := value											; This value can only be set once
 				}
 				this.error(this.TPStructName, value)
-			} get{
+			} get {
 				if !this._TP
 					xlib.exception(this.TPStructName " has no value.")
 				return this._TP
@@ -85,9 +69,9 @@ class poolbase {
 			}
 		}
 		; threadPool specific properties
-		max{																			; Max threads - can only be set once
-			set{
-				if !this._max {
+		max {																			; Max threads - can only be set once
+			set {
+				if !this.haskey("_max") {
 					this._max := value
 					return xlib.core.pool.setThreadpoolThreadMaximum(this.pptp, value)
 				}
@@ -96,9 +80,9 @@ class poolbase {
 				return this._max
 			}
 		}
-		min{																			; Min threads - can only be set once
-			set{
-				if !this._min {
+		min {																			; Min threads - can only be set once
+			set {
+				if !this.haskey("_min") {
 					this._min := value
 					return xlib.core.pool.setThreadpoolThreadMinimum(this.pptp, value)
 				}
@@ -108,7 +92,7 @@ class poolbase {
 			}
 		}
 		; Clean up
-		cleanUp(p*){
+		cleanUp(p*) {
 			; Destroys the pool
 			this.ptpp:="" 
 		}
@@ -137,14 +121,14 @@ class poolbase {
 			}
 		}
 		; Callback environment specific properties
-		callbackLibrary{
-			set{
+		callbackLibrary {
+			set {
 				xlib.core.pool.setThreadpoolCallbackLibrary(this.pcbe, value)		; value = (void*) mod
 				return value
 			}
 		}
 		pool {																		; The associated pool - can only be set once
-			set{                                                        			
+			set {                                                        			
 				if !this.poolIsSet {                                    			
 					xlib.core.pool.setThreadpoolCallbackPool(this.pcbe, value)		; value = ptpp
 					this.poolIsSet:=true
@@ -176,7 +160,7 @@ class poolbase {
 				TP_CALLBACK_PRIORITY_NORMAL 	(2)	The callback should run at normal priority.
 				TP_CALLBACK_PRIORITY_INVALID	(3)	invalid
 			*/
-			set{
+			set {
 				xlib.core.pool.setThreadpoolCallbackPriority(value)					; Note: The function doesn't return a value. The function throws on invalid input.
 				return this._priority := value                                  	; The function throws on invalid input.
 			} get {                                                             	; The function also confirms that the OS supports the function. Throws if not supported.
@@ -193,7 +177,6 @@ class poolbase {
 		;	CloseThreadpoolCleanupGroupMembers
 		;	CreateThreadpoolCleanupGroup                                                                           	
 	class TP_CLEANUP_GROUP extends xlib.poolbase.TP_BASE {                   	
-		
 		; Base properties
 		static TPStructName := "ptpcg"									; Must be set
 		initFunc := xlib.core.pool.createThreadpoolCleanupGroup			; Must be set
@@ -208,7 +191,6 @@ class poolbase {
 		; callback environment specific methods and properties
 		
 		; Methods
-		
 		waitClose(fCancelPendingCallbacks:=true, pvCleanupContext:=0){
 			; Parameters
 			; 
