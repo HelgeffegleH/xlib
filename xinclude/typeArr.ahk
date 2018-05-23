@@ -60,7 +60,8 @@
 		return x<lb || x>ub
 	}
 	__Delete(){
-		xlib.mem.globalFree(this.ptr)
+		if isobject(xlib) && isobject(xlib.mem) ; in case we are exiting the application and xlib has be deleted.
+			xlib.mem.globalFree(this.ptr)
 	}
 	
 	_NewEnum(){
