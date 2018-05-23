@@ -3,7 +3,8 @@
 		return this.exception(msg,r,depth,output)
 	}
 	exception(msg,r,depth,output){
-		Critical ; ?
+		; Note: Removed critical here, because caught exceptions caused incorrect critical settings.
+		; Could restore setting but doesn't seem to be worth the bother.
 		msg.="`n`nErrorLevel: " . ErrorLevel . "`nLast error: " . this.formatLastError() . (IsObject(r) ? "`nFunction returned: " . r[1] : "`nNo return value specified.") . this.getCallStack()
 		this.lastError:=Exception(msg,-abs(depth)-3) ; -3 to never show inside error class.
 		if (output="string"){
@@ -32,11 +33,11 @@
 	}
 	getCallStack(){
 		; The goal was to make this as ugly as possible, mission completed.
-		local c,o,h,k,v,str
+		local c,o,h,k,v,str,e
 		o:=[]
 		h:=0
-		while !((c:=exception("",-5-abs(h)).What)<0)
-			o.insertAt(1,c),h++
+		while !( ( e:=exception("",-5-abs(h)) ).What < 0 )
+			o.insertAt(1, e.What "`t`t" . e.line),h++
 		str:="`n`nCallstack:`n"
 		for k, v in o
 			str.=k " " v "`n" 
