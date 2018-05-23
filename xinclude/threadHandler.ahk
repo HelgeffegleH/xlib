@@ -12,6 +12,7 @@
 	}
 	restartAllTasks(){
 		; User should check that no threads are running before calling this methods. Exception on failure.
+		local k
 		if this.isAnyThreadRunning()		; Verify no threads still running. 
 			xlib.exception("Cannot restart all tasks before all task finished.",,-1)
 		for k in this.binArr
@@ -43,13 +44,13 @@
 		pCb:=xlib.ccore.taskCallbackBin()
 		this.OnMessageReg()
 		this.createTask(pCb,this.callbackStructs[callbackNumber].params.pointer,start,stackSize,restarting)
-		return
+		return callbackNumber
 	}
-	createTask(pBin,pArgs,start:=true,stackSize:=0,restarting:=false){
+	createTask(pBin, pArgs, start:=true, stackSize:=0, restarting:=false){
 		; pBin, pointer to binary buffer with 
 		; pArgs, pointer to the arguments for the binary code
 		; "Return values" from task function pBin, should be put in pArgs
-		static CREATE_SUSPENDED:=0x00000004
+		static CREATE_SUSPENDED := 0x00000004
 		local threadData,ind
 		if !restarting {
 			this.stackSizes.push(stackSize)
@@ -59,14 +60,17 @@
 		} else {
 			ind:=restarting
 		}
+		local crit := a_isCritical
+		critical(1000)	; Ensure callback doesn't interrupt before thread handle and id is set, since the callback reciever calls closeHandle()
 		threadData := xlib.core.thread.createThread(pBin, pArgs, 0, stackSize, start ? 0 : CREATE_SUSPENDED) ; For reference, threadData := {hThread:th,threadId:lpThreadId}
-		if !restarting{
+		if !restarting {
 			this.thHArr.Push(threadData.hThread)
 			this.tIdArr.Push(threadData.threadId)
 		} else { 
 			this.thHArr.Set(ind,threadData.hThread)
 			this.tIdArr.Set(ind,threadData.threadId)
 		}
+		critical(crit)
 		return
 	}
 	startAllTasks(){
@@ -98,6 +102,7 @@
 		return xlib.core.thread.resumeThread(this.thHArr.get(ind))
 	}
 	terminateAllThreads() {
+		local k, tH
 		if this.thHArr.getLength()
 			for k, tH in this.thHArr
 				xlib.core.thread.terminateThread(tH), xlib.core.misc.closeHandle(tH)
@@ -202,19 +207,24 @@
 	callbackReciever(wParam, lParam, msg, hwnd){
 		; wParam is the address to the object which requested the callback
 		; lParam is the callback number of that object.
-		static WAIT_TIMEOUT:=	0x00000102
-		static max_wait:=100								
-		Critical()
+		critical()
+		static WAIT_TIMEOUT := 0x00000102
+		static max_wait := 100								
+		local e
 		this:=Object(wParam)
-		if this.waitForTask(lParam,max_wait)==WAIT_TIMEOUT													; This doesn't even happen on max_wait 0, in simple test case.  Consider remove.
-			xlib.exception("Callback recieved but thread has not finished after waiting " max_wait "ms.")	; There isn't a problem closing the handle if the thread is running anyways, it seems.
-		; Close thread handle here so it is done when user recieves the callback.
-		this.cleanUpThread(lParam)
-		
-		if this.callbackFunctions.Haskey(lParam) 
-			this.callbackFunctions[lParam].Call(lParam,this)	 ;<< note >> use threadFunc instead. To ensure the below is executed if the user function would throw an exception.
-		if this.autoReleaseCallbackStructAfterCallback[lParam]
-			this.callbackStructs[lParam]:=""	; this will decrement the reference count.
+		try {
+			if this.waitForTask(lParam, max_wait) == WAIT_TIMEOUT												; This doesn't even happen on max_wait 0, in simple test case.  Consider remove.
+				xlib.exception("Callback recieved but thread has not finished after waiting " max_wait " ms.")	; There isn't a problem closing the handle if the thread is running anyways, it seems.
+			; Close thread handle here so it is done when user recieves the callback.
+			this.cleanUpThread(lParam)
+			if this.callbackFunctions.Haskey(lParam) 
+				this.callbackFunctions[lParam].Call(lParam, this)
+		} catch e {
+			throw e													; throw exception after releasing struct.
+		} finally {
+			if this.autoReleaseCallbackStructAfterCallback[lParam]
+				this.callbackStructs[lParam] := ""					; this will decrement the reference count.
+		}
 		return 0
 	}
 	OnMessageReg() {
@@ -223,13 +233,13 @@
 			return
 		local msgFn
 		msgFn:=xlib.ui.threadHandler.msgFn:=ObjBindMethod(xlib.ui.threadHandler,"callbackReciever")
-		OnMessage(this.callbackMsgNumber, msgFn)
+		OnMessage(xlib.ui.threadHandler.callbackMsgNumber, msgFn, 200)	; Ponder this, 200 that is.
 		xlib.ui.threadHandler.isRegistredForCallbacks:=true
 	}
 	OnMessageUnReg(){	; unregister callbacks, needed to make script not persistent.
 		if !xlib.ui.threadHandler.isRegistredForCallbacks
 			return
-		OnMessage(this.callbackMsgNumber, xlib.ui.threadHandler.msgFn, 0)
+		OnMessage(xlib.ui.threadHandler.callbackMsgNumber, xlib.ui.threadHandler.msgFn, 0)
 		xlib.ui.threadHandler.isRegistredForCallbacks:=false
 	}
 	makeCallbackStruct(pBin,pArgs,callbackNumber){
@@ -258,10 +268,13 @@
 		if !msgWin
 			msgWin:=guiCreate()
 		if !pPostMessage
-			pPostMessage:=xlib.ui.getFnPtrFromLib("User32.dll","PostMessage",true)
+			pPostMessage:=xlib.ui.getFnPtrFromLib("User32.dll", "PostMessage", true)
 		
 		udf		:= new xlib.struct(sizeOfudf, 										, "taskCallbackUDF")
 		params	:= new xlib.struct(sizeOfParams,	Func("ObjRelease").Bind(&this)	, "taskCallbackParams")
+		
+		ObjAddRef(&this)	; Increment the reference count to ensure the object exists when the callback is recieved. See callbackReciever()
+							; Needs to be released when the struct is deleted, hence Func("ObjRelease").Bind(&this) is used as clean up function for the struct.
 		
 		; udf struct
 		udf.build(	 ["Ptr",	pBin, 	"pudFn"		]									; Pointer to binary code.					
@@ -274,8 +287,6 @@
 						,["Ptr",	callbackNumber,			"callbackNumber"	]		; The threads index, internal.
 						,["Uint",	this.callbackMsgNumber, "callbackMsgNumber"	])		; Defined at the top of this file.
 						
-		ObjAddRef(&this)	; Increment the reference count to ensure the object exists when the callback is recieved. See callbackReciever()
-							; Needs to be released when the struct is deleted, hence Func("ObjRelease").Bind(&this) is used as clean up function for the struct.
 		this.callbackStructs[callbackNumber]:={udf:udf,params:params}
 		return
 	}
