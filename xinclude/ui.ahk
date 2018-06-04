@@ -24,27 +24,27 @@
 			xlib.exception("No function specified",,-1)
 		if IsObject(lib)
 			dll:=lib[1]
-		if !lib {
+		if !lib {	; no lib specified, search common libs.
 			for k, clib in common_libs {
 				try 
 					fnPtr := xlib.ui.getFnPtrFromLib(clib, fn, suffixWA, false)
 				if fnPtr
 					return fnPtr
-				
 			}
 			xlib.exception("No library found for function:`t" fn)
 		}
 		
 		if !dll
-			(dll := DllCall("Kernel32.dll\GetModuleHandle", "Str", lib, "Ptr")) ? free := false : dll := DllCall("Kernel32.dll\LoadLibrary", "Str", lib, "Ptr")
+			(dll := xlib.ui.getModuleHandle(lib)) ? free := false : dll := xlib.ui.loadLibrary(lib)
 		if !dll
 			xlib.exception("Failed to load library: " lib)
 		if (suffixWA==1)
 			fn.= A_IsUnicode ? "W" : "A"
-		fnPtr:=DllCall("Kernel32.dll\GetProcAddress", "Ptr", dll, "AStr", fn, "Ptr")
+		
+		fnPtr := xlib.ui.getProcAddress(dll, fn)
 		
 		if (!fnPtr && suffixWA==-1)
-			fnPtr:=DllCall("Kernel32.dll\GetProcAddress", "Ptr", dll, "AStr", fn . (A_IsUnicode ? "W" : "A"), "Ptr")
+			fnPtr:=xlib.ui.getProcAddress(dll, fn . (A_IsUnicode ? "W" : "A"))
 		
 		if free ; This is probably not wanted.
 			xlib.ui.freeLibrary(dll)
@@ -53,6 +53,18 @@
 			xlib.exception("Failed to get procedure address:`t" fn)
 		
 		return fnPtr
+	}
+	getModuleHandle(byref lib){
+		; No error handling!
+		return DllCall("Kernel32.dll\GetModuleHandle", "Ptr", &lib, "Ptr")
+	}
+	loadLibrary(byref lib){
+		; No error handling!
+		return DllCall("Kernel32.dll\LoadLibrary", "Ptr", &lib, "Ptr")
+	}
+	getProcAddress(dll, fn){
+		; No error handling!
+		return DllCall("Kernel32.dll\GetProcAddress", "Ptr", dll, "astr", fn, "Ptr")
 	}
 	freeLibrary(lib){
 		; Url:
