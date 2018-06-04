@@ -23,7 +23,7 @@ class callback {
 				fn := xlib.ui.getFnPtrFromLib(, fn.1, -1)		; Dll file omitted
 		} ; else implies fn is a pointer
 		if type(fn) != "Integer" || !fn
-			xlib.exception(A_ThisFunc "failed, fn: " fn)
+			xlib.exception(A_ThisFunc " failed, fn: " fn)
 		return fn
 	}
 	setupOffsetArray(decl){
@@ -35,6 +35,7 @@ class callback {
 		local
 		global xlib
 		o := {0:0}	; offset of each parameter in the parameter array. First param is at offset 0, second param is at offset 0+ofn(param1)...
+		
 		for k, type in decl
 			o[k] := o[k-1] + ofn.call(type)			; each iteration moves the offset ofn(type) bytes forward. Hence, param k+1 is at o[k]+ofn(paramk).
 		this.paramSize := ceiln( o[o.maxindex()] )	; This is probably not needed, investigate.
