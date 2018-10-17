@@ -58,16 +58,14 @@ class callback {
 		local
 		global xlib
 		callId := this.callId++ ; In case of interruptions
-		this.paramCache.setCapacity( callId, this.paramSize )
-		, p := this.paramCache.getAddress( callId )					; pointer to params
-		, o := this.o												; offsets, zero based index
-		, d := this.decl											; decl, types
+		this.paramCache[ callId ] := p := xlib.mem.globalAlloc( this.paramSize )	; p - pointer to params
+		, o := this.o																; offsets, zero based index
+		, d := this.decl															; decl, types
 		
-		for k, par in params										; Write parameters to memory
+		for k, par in params														; Write parameters to memory
 			numput( par, p, o[k-1], d[k] )
 		
-		this.retCache.setCapacity( callId, 8 )						; All returns are 8 bytes
-		r := this.retCache.getAddress( callId )						; return pointer
+		this.retCache[ callId ] := r :=	xlib.mem.globalAlloc( 8 )					; All returns are 8 bytes, r - return pointer
 		
 		;
 		; This struct is passed to the callback (new thread)
@@ -77,61 +75,59 @@ class callback {
 		static structSize := 3 * A_PtrSize
 		
 		; Set up clean up function for releasing memory when the pv struct is released.
-		; => is a closure.
-		paramCache	:= this.paramCache	; free variables
-		retCache 	:= this.retCache    ;
-		cleanUpFn :=   ( struct ) => ( paramCache.delete(callId), retCache.delete(callId) ) ; xlib.struct passes this (it self) when it calls the clean up function.
+		; => is a closure (due to free, p and r)
+				
+		free := xlib.mem.globalFree.bind('')						; func for freeing return and params
+		cleanUpFn :=   ( struct ) => ( free.call(p), free.call(r) ) ; xlib.struct passes this (it self) when it calls the clean up function.
 		
 		pv := new xlib.struct( structSize,  cleanUpFn, a_thisfunc . " ( pv )") ; name the struct 'a_thisfunc ( pv )' for db purposes.
 		pv.build(	 
 					["ptr",	this.fn,	"fn"],
-					["ptr",	p, 			"params"],
-					["ptr",	r,			"ret"]
+					["ptr",	p, 			"params"],		; pointer to params
+					["ptr",	r,			"ret"]			; return pointer
 				)
 		
 		return [pv, callId]
 	}
 	; Object to store and get result from. 
-	class resObj {
-		__new(pargs, o, decl, ret, max){
-			; input, free vars.
-			; pargs,	pointer to arguments passed by user.
-			; o,		offsets of arguments.
-			; decl,		the function declaration, for correct types.
-			; ret,		the return value.
-			; max,		the max index for k parameter of __get
-			local
-			return	{ base : { __get : func("__get"), __class : "resObj" } }
-			__get(this, k := 0, derf*) { ; closure
-				; k parameter number to retreive, omit to fetch the return, eg return := res[]
-				; derf, dereference the parameter to this type. Eg, if parameter k is a pointer to a pointer to a 'string', str := res[k, "ptr", "str"]
-				global xlib
-				if type(k) != "Integer"
-					xlib.exception("Invalid type, must be integer, got:"  . type(k))
-				if k == 0
-					r := ret
-				else if  k > 0 && k <= max
-					r := numget(pargs, o[k-1], decl[k])
-				else
-					xlib.exception("Index out of bounds: " . string(k) . " ( 0 - " . string(max) . " )")
-				if derf {
-					stop := false	; Needs to stop after "str" since remaining values in the array derf are strget params.
-					for k, type in derf
-						r := instr(type, "str") ? (stop := true , strget( getStrGetParams(derf, k+1, r)* ))	; str
-												: numget(r, type)											; number
-					until stop
-				}
-				return r
-				; Nested function
-				getStrGetParams(arr, ind, strPtr){	; When type is "str", the remaining parameter can be parameters for strget, eg, ret[k, "str", length := 32, encoding := "UTF-8"]
-					local
-					ret := [strPtr]					; First param for strget is the address.
-					while arr.haskey(ind)			; Maximum two iterations else error.
-						ret.push arr[ind++]
-						
-					return ret
-				}
+	createResObj(pargs, o, decl, ret, max) {
+		; input, free vars.
+		; pargs,	pointer to arguments passed by user.
+		; o,		offsets of arguments.
+		; decl,		the function declaration, for correct types.
+		; ret,		the return value.
+		; max,		the max index for k parameter of __get
+		local
+		return	{ base : { __get : func("__get"), __class : "resObj" } }
+		__get(this, k := 0, derf*) { ; closure
+			; k parameter number to retreive, omit to fetch the return, eg return := res[]
+			; derf, dereference the parameter to this type. Eg, if parameter k is a pointer to a pointer to a 'string', str := res[k, "ptr", "str"]
+			global xlib
+			if type(k) != "Integer"
+				xlib.exception("Invalid type, must be integer, got:"  . type(k))
+			if k == 0									; get return value
+				r := ret
+			else if  k > 0 && k <= max					; get parameter
+				r := numget(pargs, o[k-1], decl[k])
+			else										; no such parameter
+				xlib.exception("Index out of bounds: " . string(k) . " ( 0 - " . string(max) . " )")
+			if derf.length() {
+				stop := false	; Needs to stop after "str" since remaining values in the array derf are strget params.
+				for k, type in derf
+					r := instr(type, "str") ? (stop := true , strget( getStrGetParams(derf, k+1, r)* ))	; str
+											: numget(r, type)											; number
+				until stop
+			}
+			return r
+			; Nested function
+			getStrGetParams(arr, ind, strPtr){	; When type is "str", the remaining parameter can be parameters for strget, eg, ret[k, "str", length := 32, encoding := "UTF-8"]
+				local
+				ret := [strPtr]					; First param for strget is the address.
+				while arr.haskey(ind)			; Maximum two iterations else error.
+					ret.push arr[ind++]
+				return ret
 			}
 		}
 	}
+	
 }
