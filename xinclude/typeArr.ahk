@@ -1,8 +1,5 @@
 ﻿class typeArr {
-	; Might use comobjarray instead.
 	;<<typeArr>>
-	; To do, improve, eg, expand, delete, insertat
-	;
 	; n, number of elements
 	; type, type of the elements. Can be any of the regular "NumPut"-types, eg, "Uint", "Char"...
 	; sizeOfType, the size in byte of the specified type, eg, Int -> 4
