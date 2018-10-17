@@ -32,7 +32,7 @@ class poolbase {
 		; Properties 
 		static TPStructName := "TP" 
 		TP {																			; _TP
-			set {                                                                        ; can only be set once, + set to "" to destroy
+			set {                                                                       ; can only be set once, + set to "" to destroy
 				if value == "" && this._TP {											; Clear the property to destroy or close the structure
 					if !this.closeFunc
 						xlib.exception("Classes extending TP_BASE must specify a closeFunc.")
@@ -188,10 +188,10 @@ class poolbase {
 				return this.TP
 			}
 		}
-		; callback environment specific methods and properties
+		; Clean-up group specific methods and properties
 		
 		; Methods
-		waitClose(fCancelPendingCallbacks:=true, pvCleanupContext:=0){
+		closeThreadpoolCleanupGroupMembers(fCancelPendingCallbacks := true, pvCleanupContext := 0){
 			; Parameters
 			; 
 			; ptpcg [in, out] A TP_CLEANUP_GROUP structure that defines the cleanup group. The
@@ -207,17 +207,12 @@ class poolbase {
 			;
 			xlib.core.pool.closeThreadpoolCleanupGroupMembers(this.ptpcg, fCancelPendingCallbacks, pvCleanupContext)
 		}
-		close(pvCleanupContext:=0){
-			this.waitClose(false, pvCleanupContext)
-		}
+		
 		; Clean up
-		onExit := "waitAll"												; Consider how to set this or which default to use.		;<< note waitAll >>
+		fCancelPendingCallbacksDefault := true												; Consider how to set this and which default to use.
 		cleanUp(){					
-			if this.onExit == "waitAll"					
-				this.waitClose()										; Waits for all callbacks
-			else if this.onExit == "waitRunning"					
-				this.close()											; Cancels outstanding and waits for running
-			this.ptpcg:=""												; destroys the callback environment
+			this.closeThreadpoolCleanupGroupMembers(this.fCancelPendingCallbacksDefault)
+			this.ptpcg := ""												; destroys the clean-up group.
 		}
 	}
 
@@ -230,15 +225,16 @@ class poolbase {
 		; TP_WORK
 		; TP_TIMER
 		; TP_WAIT
-		__new(callback, params:=0, pcbe:=0){
+		__new(callback, params := 0, pcbe :=0, poolHasCleanUpGroup := false ){
 			base.__new(callback,params,pcbe)							; calls initFunc, which must be impemented.
 			this.pv := params											; Store callback parameters.
 			this.pcbe := pcbe											; Store callback environment pointer.
+			if poolHasCleanUpGroup										; If true, a clean-up group does the clean up, hence the callback object
+																		; should not call functions such as CloseThreadpoolWork, because the objects have already been released.
+				this.closeFunc := (p*) =>								; Does nothing.
 		}
-		wait(fCancelPendingCallbacks:=false){							; A func object, waitFunc, must be specified.
+		wait(fCancelPendingCallbacks := false){							; A func object, waitFunc, must be specified.
 			; Waits for the callback to finish, optionally cancels it if it hasn't started, use cancel() for clarity.
-			if !this.waitFunc
-				xlib.exception("Error in " A_ThisFunc ". A wait function must be defined.")
 			this.waitFunc(this.TP, fCancelPendingCallbacks)
 		}
 		cancel(){
@@ -247,8 +243,6 @@ class poolbase {
 		}
 		submit(p*){
 			xlib.exception("Error in " A_ThisFunc ". A submit function must be defined.")
-		}
-		registerScriptCallback(scriptFunc){								; Register a script function to be called when the callback returns
 		}
 		getParams(){
 			; Returns the parameter pointer for the work callback
@@ -265,7 +259,7 @@ class poolbase {
 			}
 		}
 		cleanUp(){
-			this.TP := ""												; closes the callback object. calls closeFunc, which must be impemented.
+			this[ this.TPStructName ] := ""								; closes the callback object. calls closeFunc, which must be impemented.
 		}
 	}
 
@@ -286,9 +280,6 @@ class poolbase {
 		
 		submit(){																; Submits the work.
 			xlib.core.pool.submitThreadpoolWork(this.pwk)
-			; Set isOutstanding := true
-			; Handle callback
-			; ...
 		}
 
 		; Properties
