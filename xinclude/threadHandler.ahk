@@ -24,6 +24,8 @@
 			this.registerTaskCallback(this.binArr.Get(ind),this.argArr.Get(ind),this.callbackFunctions[ind],this.startOptions[ind],this.stackSizes[ind], ind) ; ind will indicate restart and serve as callbackNumber
 		else
 			this.createTask(this.binArr.Get(ind),this.argArr.Get(ind),this.startOptions[ind],this.stackSizes[ind], ind)
+		if !this.startOptions[ind] ; since we are restarting, over ride start option.
+			this.startTask( ind )
 	}
 	;<<Task methods>>
 	registerTaskCallback(pBin,pArgs,callbackFunction,start:=true,stackSize:=0,restarting:=false){
@@ -262,19 +264,22 @@
 		*/
 		static sizeOfudf:=A_PtrSize*2
 		static sizeOfParams:=A_PtrSize*5+4
-		static pPostMessage
-		static msgWin
-		local udf, params
-		if !msgWin
-			msgWin:=guiCreate()
-		if !pPostMessage
-			pPostMessage:=xlib.ui.getFnPtrFromLib("User32.dll", "PostMessage", true)
+		static pPostMessage := 0
+		static msgHWND := 0
 		
-		udf		:= new xlib.struct(sizeOfudf, 										, "taskCallbackUDF")
-		params	:= new xlib.struct(sizeOfParams,	Func("ObjRelease").Bind(&this)	, "taskCallbackParams")
+		local 
+		global xlib
 		
-		ObjAddRef(&this)	; Increment the reference count to ensure the object exists when the callback is recieved. See callbackReciever()
-							; Needs to be released when the struct is deleted, hence Func("ObjRelease").Bind(&this) is used as clean up function for the struct.
+		if !msgHWND {
+			C := xlib.constants
+			pPostMessage := C.pPostMessage
+			msgHWND := C.msgHWND
+		}
+		
+		udf		:= new xlib.struct(sizeOfudf,, "taskCallbackUDF")
+		cleanupfn := Func("ObjRelease").Bind(&this)
+		params	:= new xlib.struct(sizeOfParams,, "taskCallbackParams")
+		
 		
 		; udf struct
 		udf.build(	 ["Ptr",	pBin, 	"pudFn"		]									; Pointer to binary code.					
@@ -282,11 +287,16 @@
 		; params struct	
 		params.build(	 ["Ptr",	udf.pointer,			"userStruct"		]		; pointer to the user struct.
 						,["Ptr",	pPostMessage,			"pPostMessage"		]		;
-						,["Ptr",	msgWin.hwnd,			"hwnd"				]		; The message is posted to the msgWin window.
+						,["Ptr",	msgHWND,				"hwnd"				]		; See xlib.constants.msgHWND.
 						,["Ptr",	&this,					"this"				]		; See callbackReciever.
 						,["Ptr",	callbackNumber,			"callbackNumber"	]		; The threads index, internal.
 						,["Uint",	this.callbackMsgNumber, "callbackMsgNumber"	])		; Defined at the top of this file.
-						
+		
+		; Only increment ref count of 'this' and set clean up function after struct successfully has been built
+		ObjAddRef(&this)	; Increment the reference count to ensure the object exists when the callback is recieved. See callbackReciever()
+							; Needs to be released when the struct is deleted, hence Func("ObjRelease").Bind(&this) is used as clean up function for the struct.
+		
+		params.setCleanUpFunction( cleanupfn )
 		this.callbackStructs[callbackNumber]:={udf:udf,params:params}
 		return
 	}
