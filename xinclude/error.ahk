@@ -26,7 +26,7 @@
 		if (msgn="")
 			msgn:=A_LastError
 		DllCall("Kernel32.dll\FormatMessage", "Uint", FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER, "Ptr", 0, "Uint",  msgn, "Uint", 0, "PtrP", lpBuffer,  "Uint", 0, "Ptr", 0, "Uint")
-		msg:=StrGet(lpBuffer+0)
+		msg:=StrGet(lpBuffer)
 		if !DllCall("Kernel32.dll\HeapFree", "Ptr", DllCall("Kernel32.dll\GetProcessHeap","Ptr"), "Uint", 0, "Ptr", lpBuffer) ; If the function succeeds, the return value is nonzero.
 			throw Exception("HeapFree failed.")
 		return StrReplace(msg,"`r`n") . "  " . msgn . Format(" (0x{:04x})",msgn)
@@ -36,7 +36,7 @@
 		local c,o,h,k,v,str,e
 		o:=[]
 		h:=0
-		while !( ( e:=exception("",-5-abs(h)) ).What < 0 )
+		while !(( e:=exception("",-5-abs(h)) ).What is 'number') 
 			o.insertAt(1, e.What "`t`t" . e.line),h++
 		str:="`n`nCallstack:`n"
 		for k, v in o
