@@ -53,6 +53,18 @@ class mem {
 			xlib.exception("VirtualProtect failed to apply new memory protection: . " flNewProtect . " at adress: " . lpAddress . " (" . dwSize . " bytes).", [r])
 		return lpflOldProtect
 	}
+	_aligned_malloc(size, alignment){
+		/*
+		void * _aligned_malloc(  
+			size_t size,   
+			size_t alignment  
+		); 
+		*/
+		local p := dllcall("MSVCRT.dll\_aligned_malloc", "ptr", size, "ptr", alignment, "cdecl ptr")
+		if !p
+			xlib.exception(a_thisfunc " failed for size: " size ", alignment: " alignment ".")
+		return 
+	}
 	rawPut(raw32, raw64){	; For writing binary code to memory.
 		local k, i, bin, raw
 		bin:=xlib.mem.virtualAlloc((raw:=(A_PtrSize==4?raw32:raw64)).length()*4)
