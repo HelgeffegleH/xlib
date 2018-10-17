@@ -63,7 +63,7 @@ class mem {
 		local p := dllcall("MSVCRT.dll\_aligned_malloc", "ptr", size, "ptr", alignment, "cdecl ptr")
 		if !p
 			xlib.exception(a_thisfunc " failed for size: " size ", alignment: " alignment ".")
-		return 
+		return p
 	}
 	rawPut(raw32, raw64){	; For writing binary code to memory.
 		local k, i, bin, raw
