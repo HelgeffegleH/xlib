@@ -4,7 +4,7 @@
 	
 	#include threadHandler.ahk			; For "manual" thread handling.
 	#include threadPool_B.ahk				; For thread pooling.
-	
+	#include createLib.ahk
 	; Misc user methods
 	nLogicalCores(){
 		; Returns the number logical processor cores on the system.
