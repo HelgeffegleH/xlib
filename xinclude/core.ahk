@@ -16,7 +16,7 @@ class core {
 		}
 		*/
 		; 	Thread Pool API
-		; Url:
+		; Url:	
 		;	- https://msdn.microsoft.com/en-us/library/windows/desktop/ms686766(v=vs.85).aspx
 		;
 		;	Table of contents, in order of appearance:
@@ -230,7 +230,7 @@ class core {
 			; Parameters:
 			; 	_Inout_ PTP_TIMER pti
 			; Note:
-			;	- This function does not return a value.		
+			;	- This function does not return a value.
 			DllCall("Kernel32.dll\CloseThreadpoolTimer", "ptr", pti)
 		}
 		createThreadpoolTimer(pfnti, pv, pcbe){
@@ -665,7 +665,7 @@ class core {
 				TP_CALLBACK_PRIORITY_NORMAL 	(2)	The callback should run at normal priority.
 				TP_CALLBACK_PRIORITY_INVALID	(3)
 			*/
-			if Priority < 0 || Priority > 2
+			if type(Priority) !== 'Integer' || Priority < 0 || Priority > 2 
 				xlib.exception("Invalid Priority value: " Priority ". Priority must be 0, 1 or 2.")
 			local envVersion := xlib.getEnvironmentVersion()
 			if (envVersion == 3)
@@ -710,7 +710,7 @@ class core {
 			;	long-running,  whether  or not a thread is available for processing callbacks or
 			;	the threadpool is able to allocate a new thread. Therefore, this function should
 			;	be called only once, even if it returns FALSE.
-			return DllCall("Kernel32.dll\CallbackMayRunLong", "ptr", pci)
+			return DllCall("Kernel32.dll\CallbackMayRunLong", "ptr", pci, "int")
 		}
 		;	<< Callback clean up >>
 		;	DisassociateCurrentThreadFromCallback
