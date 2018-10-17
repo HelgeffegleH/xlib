@@ -1,7 +1,7 @@
 ﻿;<< Error handling >>
 exception(msg:="",r:="",depth:=0, legacyParameter_1:="",legacyParameter_2:=""){
 	; This looks wierd, it has been changed, it was convenient to keep this format	
-	throw new xlib.error(msg,r,depth,"obj") ; Might just change to throw here.
+	throw new xlib.error(msg,r,depth,"obj") ; Might just change to throw here. (Seems so...)
 }
 getEnvironmentVersion(){
 	; Used by core\initializeThreadpoolEnvironment
@@ -41,12 +41,35 @@ getOsVersion(major:=true, minor:=true, build:=false){
 			.	(build ? OS.3 : "")
 }
 
+splitTypesAndArgs(typesAndArgs, byref decl, byref params){
+	local
+	decl := []		; function declaration
+	params := []	; parameters to be passed to function
+	l := typesAndArgs.length()
+	if l & 1			; return type or cdecl specified
+		l -= 1, ret := checkIfTypeSpecified( typesAndArgs.pop() )
+	else
+		ret := "int"	; default return type
+	ind := 1
+	loop l
+		decl[ind] := typesAndArgs[a_index++]
+		, params[ind] := typesAndArgs[a_index]
+		, ind++
+	decl.push ret
+	checkIfTypeSpecified(str){
+		local
+		global xlib
+		static del := [" ", "`t"]
+		arr := strsplit(str, del)
+		for k, v in arr
+			try 
+				if xlib.type.sizeof(v)
+					return str
+		return "int " str
+	}
+}
+
 verifyCallback(callbackFunction){
-	if callbackFunction == ""
-		return
-	if !IsFunc(callbackFunction) && type(callbackFunction)!="BoundFunc"	; It is not a func object, a function name or a bound func, error
-		xlib.exception(A_ThisFunc " failed, invalid callbackFunction",,-2)
-	if !IsObject(callbackFunction) ; It is a function name. Make func object.
-		callbackFunction:=func(callbackFunction)
+	; currently not implemented
 	return callbackFunction
 }
