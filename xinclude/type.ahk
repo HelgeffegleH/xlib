@@ -15,14 +15,11 @@ class float extends xlib.type {
 		base.__new(val,type,ptr)
 	}
 	outOfBounds(val) {
-		static oobTest
-		if !oobTest
-			VarSetCapacity(oobTest,this.size,0)
-		NumPut(val,oobTest,this.type)
-		return InStr(NumGet(oobTest,this.type),"inf") || InStr(val,"nan")
+		local strVal := string(val)
+		return InStr(strVal,"inf") || InStr(strVal,"nan")
 	}
 	outOfBoundsException(val) {
-		throw Exception("Value out of bounds: " val,-2)
+		throw Exception("Value out of bounds: " val)
 	}
 }
 ;<< double >>
@@ -97,33 +94,33 @@ class uchar extends xlib.type {
 }
 ;<< char >>
 class char extends xlib.type {
-	min:=-128
-	max:=127
-	__new(val,ptr:="") {
-		base.__new(val,"Char",ptr)
+	min := -128
+	max := 127
+	__new(val, ptr := "") {
+		base.__new(val, "Char", ptr)
 	}
 }
 ;<< strbuf >>
 class strbuf extends xlib.type {
 	; specify len, the maximum string length that the buffer can hold for the specified encoding, enc. Null terminator excluded.
-	__new(len,enc:="") {
-		this.len:=len
-		this.size:=(len+1)*(enc="utf-16" || enc="cp1200" ? 2 : 1) ; Deduced from the manual. 
-		this.ptr:=xlib.mem.globalAlloc(this.size)
-		this.enc:=enc
+	__new(len, enc := "") {
+		this.len := len
+		this.size := (len+1)*(enc="utf-16" || enc="cp1200" ? 2 : 1) ; Deduced from the manual. 
+		this.ptr := xlib.mem.globalAlloc(this.size)
+		this.enc := enc
 	}
 	str {
 		get {
-			return StrGet(this.ptr,this.enc)
+			return StrGet(this.ptr, this.enc)
 		} set {
 			if this.outOfBounds(value)
 				this.outOfBoundsException(value)
-			StrPut(value,this.ptr,this.enc)
+			StrPut(value, this.ptr, this.enc)
 		}
 	}
 	val {
 		set {
-			this.str:=value
+			this.str := value
 		} get {
 			return this.str
 		}
@@ -165,7 +162,7 @@ class type extends xlib.bases.cleanupBase {
 			this.ub:=value
 		} get {
 			if (this.ub="")
-				xlib.exception("Maximum value not defined for: " this.type,,-2)
+				xlib.exception("Maximum value not defined for: " this.type)
 			return this.ub
 		}
 	}
@@ -174,7 +171,7 @@ class type extends xlib.bases.cleanupBase {
 			this.lb:=value
 		} get {
 			if (this.lb="")
-				xlib.exception("Minimum value not defined for: " this.type,,-2)
+				xlib.exception("Minimum value not defined for: " this.type)
 			return this.lb
 		}
 	}
@@ -191,16 +188,22 @@ class type extends xlib.bases.cleanupBase {
 		}
 	}
 	outOfBoundsException(val) { ; Standart error message
-		xlib.Exception("Value out of bounds: " val ". Expected value in range [" this.min "," this.max "]",-3)
+		xlib.Exception("Value out of bounds: " val ". Expected value in range [" this.min "," this.max "]")
 	}
 	sizeof(type) {
 		static sizeMap := {	 Ptr : A_PtrSize, Uptr : A_PtrSize, Uint : 4, Int : 4, Int64 : 8, Uint64 : 8
 							,Ushort : 2, Short : 2, Uchar : 1, Char : 1, Float : 4, Double : 8}
+		local
+		global xlib
+		if instr(type, 'str')
+			return a_ptrsize
+		ec := substr(type, -1) 		; end char.
+		if ec == "*" || ec = "P" 	; type* or typeP
+			return a_ptrsize
 		if !sizeMap.haskey(type)
-			xlib.exception("Invalid type: " type ".",,-2)
+			xlib.exception("Invalid type: " type ".")
 		return sizeMap[type]
-	}
-	
+	}	
 }
 ;<< FILETIME >>
 class FILETIME {
@@ -221,7 +224,7 @@ class FILETIME {
 		} else if (time!="") {
 			this.time:=time
 		} else {
-			xlib.exception("FILETIME error, invalid input, time: " time ", low: " low ", high: " high ".",,-2)
+			xlib.exception("FILETIME error, invalid input, time: " time ", low: " low ", high: " high ".")
 		}
 	}
 	pointer {
