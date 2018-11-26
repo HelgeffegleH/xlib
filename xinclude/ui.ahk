@@ -45,12 +45,12 @@
 		
 		if (!fnPtr && suffixWA==-1)
 			fnPtr:=xlib.ui.getProcAddress(dll, fn . (A_IsUnicode ? "W" : "A"))
-		
+
 		if free ; This is probably not wanted.
 			xlib.ui.freeLibrary(dll)
 
-		if !fnPtr
-			xlib.exception("Failed to get procedure address:`t" fn)
+			if !fnPtr
+			xlib.exception("Failed to get procedure address:`t" . fn)
 		
 		return fnPtr
 	}
