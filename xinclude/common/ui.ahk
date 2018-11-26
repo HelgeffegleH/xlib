@@ -2,8 +2,6 @@
 	; User classes and methods.
 	
 	
-	#include threadHandler.ahk			; For "manual" thread handling.
-	#include threadPool_B.ahk				; For thread pooling.
 	#include createLib.ahk
 	; Misc user methods
 	nLogicalCores(){

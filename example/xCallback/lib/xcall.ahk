@@ -2,7 +2,7 @@ class xcall extends xlib.callback {
 	
 	__new(fn, decl*){
 		base.__new(fn, decl*)									; initialises this.bin
-		this.handler := new xlib.ui.threadHandler()				;
+		this.handler := new xlib.threadHandler()				;
 		this.autoCleanUp( true )
 		this.checkIfParamsNeedsToBeSaved						; operates on this.decl.
 	}
