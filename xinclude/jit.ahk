@@ -2,18 +2,18 @@
 class jitFn {
 	; Compiles a function as:
 	/*
-		typedef TYPE_RET [__cdecl/__stdcall] (*fn)([...]);	
+		typedef TYPE_RET [__cdecl/__stdcall] (*fn)([arg1type, arg2type, ...]);	
 	
 		typedef struct v {
 			fn pfn;				// The function to call
-			XXX* args;			// An array of arguments
+			void* args;			// An array of arguments
 			TYPE_RET* r;		// Stores the return, 8 byte int, double or float
 		} *pv;
 		void f(pv p){
-			*(p->r) = p->pfn([p->args[0], ...]);
+			*(p->r) = p->pfn([(arg1type) p->args[0], ...]);
 		}
 	*/
-	static cache := []	; Storage for compiled functions.
+	static cache := {}	; Storage for compiled functions.
 	; Consider returning declstr for faster caching. (added parameter but not implemented)
 	__new(decl, byref rt, byref declStrOut := "" ) { ; for convenice
 		; decl - 'function declaration', includes return type and (opt) calling convention at the last element.
@@ -55,20 +55,22 @@ class jitFn {
 	declToStr(decl, byref ccrt, byref isCdecl){
 		static typeMap := 	a_ptrsize == 8 
 							?	{	; 64 bit
-									ptr		: 1,	uptr	: 1, 
-									int		: 1,	uint	: 1, 
-									int64	: 1,	uint64	: 1,		
-									short	: 1,	ushort	: 1, 
-									char	: 1,	uchar	: 1, 
-									float	: 3,	double 	: 2
+									ptr		: "1",	uptr	: "1", 
+									int		: "1",	uint	: "1", 
+									int64	: "1",	uint64	: "1",		
+									short	: "1",	ushort	: "1", 
+									char	: "1",	uchar	: "1", 
+									float	: "3",	double 	: "2",
+									str		: "1",	wstr	: "1",	astr : "1"
 								}
 							:	{	; 32 bit
-									ptr		: 1,	uptr	: 1, 
-									int		: 1,	uint	: 1, 
-									int64	: 11,	uint64	: 11,
-									short	: 1,	ushort	: 1, 
-									char	: 1,	uchar	: 1, 
-									float	: 1,	double 	: 11
+									ptr		: "1",	uptr	: "1", 
+									int		: "1",	uint	: "1", 
+									int64	: "11",	uint64	: "11",
+									short	: "1",	ushort	: "1", 
+									char	: "1",	uchar	: "1", 
+									float	: "1",	double 	: "11",
+									str		: "1",	wstr	: "1",	astr : "1"
 								}
 		local
 		global xlib
@@ -90,13 +92,13 @@ class jitFn {
 	}
 	declStrToPtRt(declStr, byref pt, byref rt){
 		pt := strsplit(declStr)
-		rt := rt = "double" ? 2 : rt = "float" ? 3 : 1	; 
+		rt := rt = "double" ? "2" : rt = "float" ? "3" : "1"	; 
 	}
 	compile32(rt, pt, cdecl := false){
 		; pt is array of parameter types, int = 1, double = 2, float = 3
 		; rt is the return type, int, double.
 		; cdecl, true if using __cdecl calling convention. Default is false, which implies __stdcall
-		static int := 1, double := 2, float := 3
+		static int := "1", double := "2", float := "3"
 		
 		local nParams := pt.length()
 		
@@ -212,7 +214,7 @@ class jitFn {
 	compile64(rt, pt, cdecl := false, _va := false){
 		; pt is array of parameter types, int = 1, double = 2, float = 3
 		; rt is the return type, int, double.
-		static int := 1, double := 2, float := 3
+		static int := "1", double := "2", float := "3"
 		local va := true	; Default for now, consider making option because not needed in general.
 		
 		local nParams := pt.length()
@@ -310,9 +312,9 @@ class jitFn {
 		raw.push(call_r10)											; Call
 																	; Return type:
 		
-		raw.push(  rt == 1 ? movq_rax_rbx 							; int
-				 : rt == 2 ? movsd_xmm0_rbx							; double
-				 : rt == 3 ? movss_xmm0_rbx 						; float
+		raw.push(  rt == int 	? movq_rax_rbx 						; int
+				 : rt == double ? movsd_xmm0_rbx					; double
+				 : rt == float 	? movss_xmm0_rbx 					; float
 				 : xlib.exception("Invalid return type: " rt ". Acceptable range is 1-3.") )	; Invalid
 		
 		
