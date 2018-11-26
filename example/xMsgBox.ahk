@@ -1,4 +1,4 @@
-﻿#include ..\xlib.ahk
+﻿#include <xlib>
 ctId:=DllCall("Kernel32.dll\GetCurrentThreadId","Uint")
 mbctr:=0
 Loop
@@ -18,7 +18,7 @@ wMsgBox(Text:="",Title:="",Options:="",callback:=""){
 	xMB.Destroy()	; Ensures self references are released when the callback returns.
 	return
 }
-class xMsgBox extends xlib.ui.threadHandler {
+class xMsgBox extends xlib.threadHandler {
 	
 	__new(Options:="", Title:="", Text:="",showOnCreate:=true,callback:=""){
 		base.__new(1)

@@ -1,14 +1,15 @@
-﻿class threadHandler {
-	static callbackMsgNumber:=0x5537
+﻿#include ccore.ahk	; compiled function.
+class threadHandler {
+	static callbackMsgNumber := 0x5537
 	;<< new >>
-	__new(maxTasks:=8){
-		this.maxTasks:=maxTasks
+	__new(maxTasks := 8){
+		this.maxTasks := maxTasks
 		this.initDataArrays()
-		this.callbackFunctions:=[]
-		this.callbackStructs:=[]
-		this.stackSizes:=[]
-		this.startOptions:=[]
-		this.autoReleaseCallbackStructAfterCallback:=[] ; See autoReleaseCallbackStruct
+		this.callbackFunctions := []
+		this.callbackStructs := []
+		this.stackSizes := []
+		this.startOptions := []
+		this.autoReleaseCallbackStructAfterCallback := [] ; See autoReleaseCallbackStruct
 	}
 	restartAllTasks(){
 		; User should check that no threads are running before calling this methods. Exception on failure.
@@ -28,31 +29,31 @@
 			this.startTask( ind )
 	}
 	;<<Task methods>>
-	registerTaskCallback(pBin,pArgs,callbackFunction,start:=true,stackSize:=0,restarting:=false){
+	registerTaskCallback(pBin,pArgs,callbackFunction,start := true,stackSize := 0,restarting := false){
 		; "Return values" from task function pBin, should be put in pArgs
 		; The callback function must accept two parameters, a reference to "this" and the callbackNumber returned by this function.
 		; callbackFunction can be the name of a function, a func or boundFunc object.
 		; Eg: myCallbackFunction(param1,...,callbackNumber, this){...}
 		local pCb, callbackNumber
 		if !restarting {
-			callbackFunction:=xlib.verifyCallback(callbackFunction)
-			callbackNumber:=this.callbackFunctions.Push(callbackFunction)
+			callbackFunction := xlib.verifyCallback(callbackFunction)
+			callbackNumber := this.callbackFunctions.Push(callbackFunction)
 			this.makeCallbackStruct(pBin,pArgs,callbackNumber)
 		} else {
-			callbackNumber:=restarting
-			start:=this.startOptions[callbackNumber]
-			stackSize:=this.stackSizes[callbackNumber]
+			callbackNumber := restarting
+			start := this.startOptions[callbackNumber]
+			stackSize := this.stackSizes[callbackNumber]
 		}
-		pCb:=xlib.ccore.taskCallbackBin()
+		pCb := xlib.ccore.taskCallbackBin()
 		this.OnMessageReg()
 		this.createTask(pCb,this.callbackStructs[callbackNumber].params.pointer,start,stackSize,restarting)
 		return callbackNumber
 	}
-	createTask(pBin, pArgs, start:=true, stackSize:=0, restarting:=false){
+	createTask(pBin, pArgs, start := true, stackSize := 0, restarting := false){
 		; pBin, pointer to binary buffer with 
 		; pArgs, pointer to the arguments for the binary code
 		; "Return values" from task function pBin, should be put in pArgs
-		static CREATE_SUSPENDED := 0x00000004
+		static CREATE_SUSPENDED  :=  0x00000004
 		local threadData,ind
 		if !restarting {
 			this.stackSizes.push(stackSize)
@@ -60,11 +61,11 @@
 			this.binArr.push(pBin)
 			this.argArr.push(pArgs)
 		} else {
-			ind:=restarting
+			ind := restarting
 		}
-		local crit := a_isCritical
+		local crit  :=  a_isCritical
 		critical(1000)	; Ensure callback doesn't interrupt before thread handle and id is set, since the callback reciever calls closeHandle()
-		threadData := xlib.core.thread.createThread(pBin, pArgs, 0, stackSize, start ? 0 : CREATE_SUSPENDED) ; For reference, threadData := {hThread:th,threadId:lpThreadId}
+		threadData  :=  xlib.thread.createThread(pBin, pArgs, 0, stackSize, start ? 0 : CREATE_SUSPENDED) ; For reference, threadData  :=  {hThread:th,threadId:lpThreadId}
 		if !restarting {
 			this.thHArr.Push(threadData.hThread)
 			this.tIdArr.Push(threadData.threadId)
@@ -79,12 +80,12 @@
 		local k, hThread
 		if this.thHArr.getLength()
 			for k, hThread in this.thHArr
-				xlib.core.thread.resumeThread(hThread)
+				xlib.thread.resumeThread(hThread)
 		else
 			xlib.exception("No thread handles available.",,-1,"Warn")
 		return 
 	}
-	setTask(ind,pBin:="",pArgs:=""){
+	setTask(ind,pBin := "",pArgs := ""){
 		; Sets new binary and or arguments for task ind.
 		; Thread must not run while this method is called, exception is thrown.
 		if this.isThreadRunning(ind)
@@ -97,86 +98,86 @@
 		return
 	}
 	setCallback(ind,callback){
-		callback:=xlib.verifyCallback(callback)
-		this.callbackFunctions[ind]:=callback
+		callback := xlib.verifyCallback(callback)
+		this.callbackFunctions[ind] := callback
 	}
 	startTask(ind){
-		return xlib.core.thread.resumeThread(this.thHArr.get(ind))
+		return xlib.thread.resumeThread(this.thHArr.get(ind))
 	}
 	terminateAllThreads() {
 		local k, tH
 		if this.thHArr.getLength()
 			for k, tH in this.thHArr
-				xlib.core.thread.terminateThread(tH), xlib.core.misc.closeHandle(tH)
+				xlib.thread.terminateThread(tH), xlib.misc.closeHandle(tH)
 		return
 	}
 	terminateTask(ind){
 		local th
-		if !th:=this.thHArr.get(ind)
+		if !th := this.thHArr.get(ind)
 			xlib.exception(A_ThisFunc " failed, no thread running for task: " ind,,-1)
-		return xlib.core.thread.terminateThread(tH)
+		return xlib.thread.terminateThread(tH)
 	}
-	autoReleaseAllCallbackStructs(bool:=true){
+	autoReleaseAllCallbackStructs(bool := true){
 		; See autoReleaseAllCallbackStructs()
 		loop this.maxTasks
-			this.autoReleaseCallbackStructAfterCallback[A_Index]:=bool
+			this.autoReleaseCallbackStructAfterCallback[A_Index] := bool
 	}
-	autoReleaseCallbackStruct(callbackNumber, bool:=true){
+	autoReleaseCallbackStruct(callbackNumber, bool := true){
 		; Call this method for indicating wether to release the callback struct after the callback.
 		; This is convenient when making new task as a local parameter and the returning without keeping a reference to task. The task will then be freed after the callback.
 		; By default, structs are not released.
 		; This should be called before starting the threads. Otherwise the callback might be recieved before this is set.
-		this.autoReleaseCallbackStructAfterCallback[callbackNumber]:=bool
+		this.autoReleaseCallbackStructAfterCallback[callbackNumber] := bool
 	}
 	cleanUpThread(ind){
 		; Close thread handle and delete handle and id.
 		local hThread
-		if hThread:=this.thHArr.Get(ind) {
-			xlib.core.misc.closeHandle(hThread)
+		if hThread := this.thHArr.Get(ind) {
+			xlib.misc.closeHandle(hThread)
 			this.thHArr.Set(ind,0)
 			this.tIdArr.Set(ind,0)
 		}
 		return
 	}
 	;<<Wait functions>>
-		;waitForMultipleObjects(nCount, lpHandles, bWaitAll:=true, dwMilliseconds:=0xFFFFFFFF)
-	waitForAllTasks(ms:=0xFFFFFFFF,waitForAll:=true){
+		;waitForMultipleObjects(nCount, lpHandles, bWaitAll := true, dwMilliseconds := 0xFFFFFFFF)
+	waitForAllTasks(ms := 0xFFFFFFFF,waitForAll := true){
 		; Returns true if all tasks are done.
 		; Return -1 if the wait times out.
-		static WAIT_OBJECT_0:=	0x00000000
-		static WAIT_TIMEOUT:=	0x00000102
+		static WAIT_OBJECT_0 := 	0x00000000
+		static WAIT_TIMEOUT := 	0x00000102
 		local r
 		
-		r:=xlib.core.wait.waitForMultipleObjects(this.thHArr.getLength(), this.thHArr.getArrPtr(),waitForAll,ms)
+		r  :=  xlib.wait.waitForMultipleObjects(this.thHArr.getLength(), this.thHArr.getArrPtr(),waitForAll,ms)
 		if !waitForAll
 			return r ; Handle return in waitForAnyTask()
-		if (r==WAIT_OBJECT_0)
+		if ( r == WAIT_OBJECT_0 )
 			return true
-		else if (r==WAIT_TIMEOUT)
+		else if ( r == WAIT_TIMEOUT )
 			return -1
 		xlib.exception("Unknown return from WaitForMultipleObjects.",[r],-1,"Warn","ExitApp")
 	}
-	waitForAnyTask(ms:=0xFFFFFFFF){
+	waitForAnyTask(ms := 0xFFFFFFFF){
 		; Returns the lowest task number of all tasks which have finished. (This is  the
 		; zero-based  index  in the thHArr, add one to get based one index for user) 
 		; Return -1 if the wait times out.
-		static WAIT_TIMEOUT:=0x00000102
+		static WAIT_TIMEOUT := 0x00000102
 		local r
-		r:=xlib.core.wait.waitForAllTasks(ms,false)
-		if (r==WAIT_TIMEOUT)
+		r := xlib.wait.waitForAllTasks(ms,false)
+		if ( r == WAIT_TIMEOUT )
 			return -1
 		return r+1
 	}
-	waitForTask(ind,ms:=0xFFFFFFFF){
+	waitForTask(ind, ms := 0xFFFFFFFF){
 		; Returns true if all task is done.
 		; Return -1 if the wait times out.
-		static WAIT_OBJECT_0:=	0x00000000
-		static WAIT_TIMEOUT:=	0x00000102
+		static WAIT_OBJECT_0 := 	0x00000000
+		static WAIT_TIMEOUT := 		0x00000102
 		local r
-		r:=xlib.core.wait.waitForSingleObject(this.thHArr.get(ind),ms)
-		if (r==WAIT_OBJECT_0)
+		r := xlib.wait.waitForSingleObject(this.thHArr.get(ind),ms)
+		if ( r == WAIT_OBJECT_0 )
 			return true
-		else if (r==WAIT_TIMEOUT)
+		else if ( r == WAIT_TIMEOUT )
 			return -1
 		xlib.exception("Unknown return from WaitForSingleObject.",[r],-1,"Warn","ExitApp")
 		return
@@ -196,11 +197,11 @@
 		return this.waitForTask(ind,0) 	== -1 ? true : false
 	}
 	;<< notification methods >>
-	notifyOnAllTaskComplete(callback,rate:=50){
+	notifyOnAllTaskComplete(callback,rate := 50){
 		; Needs a compiled waiting thread for this one. (TODO)
 		return
 	}
-	notifyOnTaskComplete(ind,callback,rate:=50){
+	notifyOnTaskComplete(ind,callback,rate := 50){
 		; This will probably not be needed due registerTaskCallback()
 		return
 	}
@@ -210,10 +211,10 @@
 		; wParam is the address to the object which requested the callback
 		; lParam is the callback number of that object.
 		critical()
-		static WAIT_TIMEOUT := 0x00000102
-		static max_wait := 100								
+		static WAIT_TIMEOUT := 	0x00000102
+		static max_wait :=  	100								
 		local e
-		this:=Object(wParam)
+		this := Object(wParam)
 		try {
 			if this.waitForTask(lParam, max_wait) == WAIT_TIMEOUT												; This doesn't even happen on max_wait 0, in simple test case.  Consider remove.
 				xlib.exception("Callback recieved but thread has not finished after waiting " max_wait " ms.")	; There isn't a problem closing the handle if the thread is running anyways, it seems.
@@ -222,27 +223,27 @@
 			if this.callbackFunctions.Haskey(lParam) 
 				this.callbackFunctions[lParam].Call(lParam, this)
 		} catch e {
-			throw e													; throw exception after releasing struct.
+			throw e														; throw exception after releasing struct.
 		} finally {
 			if this.autoReleaseCallbackStructAfterCallback[lParam]
-				this.callbackStructs[lParam] := ""					; this will decrement the reference count.
+				this.callbackStructs[lParam]  :=  ""					; this will decrement the reference count.
 		}
 		return 0
 	}
 	OnMessageReg() {
 		; Set up for recieving callback messages.
-		if xlib.ui.threadHandler.isRegistredForCallbacks
+		if xlib.threadHandler.isRegistredForCallbacks
 			return
 		local msgFn
-		msgFn:=xlib.ui.threadHandler.msgFn:=ObjBindMethod(xlib.ui.threadHandler,"callbackReciever")
-		OnMessage(xlib.ui.threadHandler.callbackMsgNumber, msgFn, 200)	; Ponder this, 200 that is.
-		xlib.ui.threadHandler.isRegistredForCallbacks:=true
+		msgFn := xlib.threadHandler.msgFn := ObjBindMethod(xlib.threadHandler,"callbackReciever")
+		OnMessage(xlib.threadHandler.callbackMsgNumber, msgFn, 200)	; Ponder this, 200 that is.
+		xlib.threadHandler.isRegistredForCallbacks := true
 	}
 	OnMessageUnReg(){	; unregister callbacks, needed to make script not persistent.
-		if !xlib.ui.threadHandler.isRegistredForCallbacks
+		if !xlib.threadHandler.isRegistredForCallbacks
 			return
-		OnMessage(xlib.ui.threadHandler.callbackMsgNumber, xlib.ui.threadHandler.msgFn, 0)
-		xlib.ui.threadHandler.isRegistredForCallbacks:=false
+		OnMessage(xlib.threadHandler.callbackMsgNumber, xlib.threadHandler.msgFn, 0)
+		xlib.threadHandler.isRegistredForCallbacks := false
 	}
 	makeCallbackStruct(pBin,pArgs,callbackNumber){
 		/*
@@ -262,23 +263,23 @@
 			unsigned int 	msg;				// message number
 		} *pPar;
 		*/
-		static sizeOfudf:=A_PtrSize*2
-		static sizeOfParams:=A_PtrSize*5+4
-		static pPostMessage := 0
-		static msgHWND := 0
+		static sizeOfudf := A_PtrSize*2
+		static sizeOfParams := A_PtrSize*5+4
+		static pPostMessage  :=  0
+		static msgHWND  :=  0
 		
 		local 
 		global xlib
 		
 		if !msgHWND {
-			C := xlib.constants
-			pPostMessage := C.pPostMessage
-			msgHWND := C.msgHWND
+			C  :=  xlib.constants
+			pPostMessage  :=  C.pPostMessage
+			msgHWND  :=  C.msgHWND
 		}
 		
-		udf		:= new xlib.struct(sizeOfudf,, "taskCallbackUDF")
-		cleanupfn := Func("ObjRelease").Bind(&this)
-		params	:= new xlib.struct(sizeOfParams,, "taskCallbackParams")
+		udf		 :=  new xlib.struct(sizeOfudf,, "taskCallbackUDF")
+		cleanupfn  :=  Func("ObjRelease").Bind(&this)
+		params	 :=  new xlib.struct(sizeOfParams,, "taskCallbackParams")
 		
 		
 		; udf struct
@@ -297,29 +298,29 @@
 							; Needs to be released when the struct is deleted, hence Func("ObjRelease").Bind(&this) is used as clean up function for the struct.
 		
 		params.setCleanUpFunction( cleanupfn )
-		this.callbackStructs[callbackNumber]:={udf:udf,params:params}
+		this.callbackStructs[callbackNumber] := {udf:udf,params:params}
 		return
 	}
 	updateCallbackStruct(pBin,pArgs,callbackNumber){
-		static sizeOfudf:=A_PtrSize*2
+		static sizeOfudf := A_PtrSize*2
 		local cbs
-		cbs:=this.callbackStructs[callbackNumber] ; convenience.
-		cbs.udf:= new xlib.struct(sizeOfudf, "taskCallbackUDF")
+		cbs := this.callbackStructs[callbackNumber] ; convenience.
+		cbs.udf :=  new xlib.struct(sizeOfudf, "taskCallbackUDF")
 		cbs.udf.build(	 ["Ptr",	pBin, 	"pudFn"		]								; udf struct
 						,["Ptr",	pArgs,	"pParams"	])
 		cbs.params.Set("userStruct", cbs.udf.pointer)									; Set userStruct member of params struct.
 		return
 	}
-	initDataArrays(restarting:=false){
+	initDataArrays(restarting := false){
 		if !restarting{
-			this.binArr:= new xlib.typeArr(this.maxTasks)	; User binary 		; Needed on restart.
-			this.argArr:= new xlib.typeArr(this.maxTasks)	; and arguments.
+			this.binArr :=  new xlib.typeArr(this.maxTasks)	; User binary 		; Needed on restart.
+			this.argArr :=  new xlib.typeArr(this.maxTasks)	; and arguments.
 		}
-		this.thHArr:= new xlib.typeArr(this.maxTasks)		; thread handle array
-		this.tIdArr:= new xlib.typeArr(this.maxTasks)		; thread id array
+		this.thHArr :=  new xlib.typeArr(this.maxTasks)		; thread handle array
+		this.tIdArr :=  new xlib.typeArr(this.maxTasks)		; thread id array
 	}
 	verifyInd(ind){
-		local caller:=Exception("",-2).What
+		local caller := Exception("",-2).What
 		if !this.indexInRange(ind,1,this.thHArr.getLength())
 			xlib.exception("Invalid")
 	}
@@ -327,7 +328,7 @@
 		local k, hThread
 		try {
 			for k, hThread in this.thHArr
-				xlib.core.misc.closeHandle(hThread)
+				xlib.misc.closeHandle(hThread)
 		}
 	}
 }

@@ -59,8 +59,8 @@ class poolbase {
 		
 	class TP_POOL extends xlib.poolbase.TP_BASE {
 		static TPStructName := "pptp"					; Must be set
-		initFunc := xlib.core.pool.createThreadPool		; Must be set
-		closeFunc := xlib.core.pool.closeThreadpool     ; Must be set
+		initFunc := xlib.pool.createThreadPool		; Must be set
+		closeFunc := xlib.pool.closeThreadpool     ; Must be set
 		pptp {											; Invoke base property
 			set {
 				return this.TP := value
@@ -73,7 +73,7 @@ class poolbase {
 			set {
 				if !this.haskey("_max") {
 					this._max := value
-					return xlib.core.pool.setThreadpoolThreadMaximum(this.pptp, value)
+					return xlib.pool.setThreadpoolThreadMaximum(this.pptp, value)
 				}
 				this.error("max", value)
 			} get {
@@ -84,7 +84,7 @@ class poolbase {
 			set {
 				if !this.haskey("_min") {
 					this._min := value
-					return xlib.core.pool.setThreadpoolThreadMinimum(this.pptp, value)
+					return xlib.pool.setThreadpoolThreadMinimum(this.pptp, value)
 				}
 				this.error("min", value)
 			} get {
@@ -111,8 +111,8 @@ class poolbase {
 		
 		; Base properties
 		static TPStructName := "pcbe"												; Must be set
-		initFunc := xlib.core.pool.initializeThreadpoolEnvironment					; Must be set
-		closeFunc := xlib.core.pool.destroyThreadpoolEnvironment    				; Must be set
+		initFunc := xlib.pool.initializeThreadpoolEnvironment					; Must be set
+		closeFunc := xlib.pool.destroyThreadpoolEnvironment    				; Must be set
 		pcbe {																		; Invoke base property
 			set {
 				return this.TP := value
@@ -123,14 +123,14 @@ class poolbase {
 		; Callback environment specific properties
 		callbackLibrary {
 			set {
-				xlib.core.pool.setThreadpoolCallbackLibrary(this.pcbe, value)		; value = (void*) mod
+				xlib.pool.setThreadpoolCallbackLibrary(this.pcbe, value)		; value = (void*) mod
 				return value
 			}
 		}
 		pool {																		; The associated pool - can only be set once
 			set {                                                        			
 				if !this.poolIsSet {                                    			
-					xlib.core.pool.setThreadpoolCallbackPool(this.pcbe, value)		; value = ptpp
+					xlib.pool.setThreadpoolCallbackPool(this.pcbe, value)		; value = ptpp
 					this.poolIsSet:=true
 					return value
 				}
@@ -142,7 +142,7 @@ class poolbase {
 			set {
 				this.ptpcg := value
 				this.pfng := pfng
-				xlib.core.pool.setThreadpoolCallbackCleanupGroup(this.pcbe, this.ptpcg, pfng)	; Note: The function doesn't return a value.
+				xlib.pool.setThreadpoolCallbackCleanupGroup(this.pcbe, this.ptpcg, pfng)	; Note: The function doesn't return a value.
 				return this.cleanUpGroup
 			} get {
 				return {ptpcg:this.ptpcg, pfng:this.pfng}
@@ -161,7 +161,7 @@ class poolbase {
 				TP_CALLBACK_PRIORITY_INVALID	(3)	invalid
 			*/
 			set {
-				xlib.core.pool.setThreadpoolCallbackPriority(value)					; Note: The function doesn't return a value. The function throws on invalid input.
+				xlib.pool.setThreadpoolCallbackPriority(value)					; Note: The function doesn't return a value. The function throws on invalid input.
 				return this._priority := value                                  	; The function throws on invalid input.
 			} get {                                                             	; The function also confirms that the OS supports the function. Throws if not supported.
 				return this._priority                                           	
@@ -179,8 +179,8 @@ class poolbase {
 	class TP_CLEANUP_GROUP extends xlib.poolbase.TP_BASE {                   	
 		; Base properties
 		static TPStructName := "ptpcg"									; Must be set
-		initFunc := xlib.core.pool.createThreadpoolCleanupGroup			; Must be set
-		closeFunc := xlib.core.pool.closeThreadpoolCleanupGroup	    	; Must be set
+		initFunc := xlib.pool.createThreadpoolCleanupGroup			; Must be set
+		closeFunc := xlib.pool.closeThreadpoolCleanupGroup	    	; Must be set
 		ptpcg {															; Invoke base property
 			set {
 				return this.TP := value
@@ -205,7 +205,7 @@ class poolbase {
 			; 	cleanup group callback function. You can specify the callback function when  you
 			; 	call SetThreadpoolCallbackCleanupGroup.
 			;
-			xlib.core.pool.closeThreadpoolCleanupGroupMembers(this.ptpcg, fCancelPendingCallbacks, pvCleanupContext)
+			xlib.pool.closeThreadpoolCleanupGroupMembers(this.ptpcg, fCancelPendingCallbacks, pvCleanupContext)
 		}
 		
 		; Clean up
@@ -272,14 +272,14 @@ class poolbase {
 	class TP_WORK extends xlib.poolbase.TP_BASE_CALLBACK { 
 		; Base methods which must be implemented
 		
-		initFunc	:= xlib.core.pool.createThreadpoolWork
-		closeFunc	:= xlib.core.pool.closeThreadpoolWork
-		waitFunc	:= xlib.core.pool.waitForThreadpoolWorkCallbacks			; Define waitFunc, used by base.cancel() and base.wait()
+		initFunc	:= xlib.pool.createThreadpoolWork
+		closeFunc	:= xlib.pool.closeThreadpoolWork
+		waitFunc	:= xlib.pool.waitForThreadpoolWorkCallbacks			; Define waitFunc, used by base.cancel() and base.wait()
 		
 		; Work specific methods
 		
 		submit(){																; Submits the work.
-			xlib.core.pool.submitThreadpoolWork(this.pwk)
+			xlib.pool.submitThreadpoolWork(this.pwk)
 		}
 
 		; Properties
@@ -304,20 +304,20 @@ class poolbase {
 
 		; Base methods which must be implemented
 
-		initFunc	:= xlib.core.pool.createThreadpoolTimer
-		closeFunc	:= xlib.core.pool.closeThreadpoolTimer
-		waitFunc	:= xlib.core.pool.waitForThreadpoolTimerCallbacks		; Define waitFunc, used by base.cancel() and base.wait()
+		initFunc	:= xlib.pool.createThreadpoolTimer
+		closeFunc	:= xlib.pool.closeThreadpoolTimer
+		waitFunc	:= xlib.pool.waitForThreadpoolTimerCallbacks		; Define waitFunc, used by base.cancel() and base.wait()
 		submit(p*){
 			this.setTimer(p*)
 		}
 		; Timer specific methods
 		
 		setTimer(pftDueTime, msPeriod, msWindowLength){
-			xlib.core.pool.setThreadpoolTimer(this.pti, pftDueTime, msPeriod, msWindowLength)
+			xlib.pool.setThreadpoolTimer(this.pti, pftDueTime, msPeriod, msWindowLength)
 		}
 		isTimerSet(){
 			; returns true if timer is set, otherwise false.
-			return xlib.core.pool.isThreadpoolTimerSet(this.pti)
+			return xlib.pool.isThreadpoolTimerSet(this.pti)
 		}
 		
 		; Properties
@@ -338,15 +338,15 @@ class poolbase {
 		;	WaitForThreadpoolWaitCallbacks
 	class TP_WAIT extends xlib.poolbase.TP_BASE_CALLBACK {
 		; Base methods which must be implemented
-		initFunc	:= xlib.core.pool.CreateThreadpoolWait
-		closeFunc	:= xlib.core.pool.CloseThreadpoolWait
-		waitFunc	:= xlib.core.pool.WaitForThreadpoolWaitCallbacks	; Define waitFunc, used by base.cancel() and base.wait()
+		initFunc	:= xlib.pool.CreateThreadpoolWait
+		closeFunc	:= xlib.pool.CloseThreadpoolWait
+		waitFunc	:= xlib.pool.WaitForThreadpoolWaitCallbacks	; Define waitFunc, used by base.cancel() and base.wait()
 		submit(p*){
 			this.SetThreadpoolWait(p*)
 		}
 		; wait specific methods
 		setThreadpoolWait(h:=0, pftTimeout:=0){
-			return xlib.core.pool.setThreadpoolWait(this.pwa, h, pftTimeout)
+			return xlib.pool.setThreadpoolWait(this.pwa, h, pftTimeout)
 		}
 		
 		; Properties
