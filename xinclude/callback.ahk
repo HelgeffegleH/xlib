@@ -2,13 +2,14 @@ class callback {
 	; Creates a 'compiled' callback function which can be passed to a threadHandler or pool object.
 	; See jit.ahk for details.
 	__new(fn, decl*){
-		; fn, the function to call, an address, or [dll]\FuncName. Note: PATH\dllFile.dll\FuncName not supported, load manually and pass address instead.
+		; fn, the function to call, an address, or [dll]\FuncName.
 		; decl, paramter types and return type and calling convention, eg, "int", "ptr", ..., "cdecl ptr"
 		local
 		global xlib
 		this.fn := this.getFn(fn)				; Get the function from string.
 		this.bin := new xlib.jitFn(decl, rt)	; Compiles the function which will call fn
 		this.decl := decl						; Stores decl for correct parameter passing and return retrieval
+		this.numputParams := this.setupNumputParams()	; operates on this.decl
 		this.o := this.setupOffsetArray(decl)	; parameter offset array
 		this.rt := rt							; return type
 	}
@@ -16,15 +17,22 @@ class callback {
 		local
 		global xlib
 		if type(fn) == "String" {	
-			fn := strsplit(fn, ["\", "/"])
-			if fn.length() == 2
-				fn := xlib.ui.getFnPtrFromLib(fn.1, fn.2, -1)	; Dll file specified
+			splitpath fn, outFnName, outDllPath
+			if outDllPath !== ''
+				fn := xlib.ui.getFnPtrFromLib(outDllPath, outFnName, -1)	; Dll file specified
 			else
-				fn := xlib.ui.getFnPtrFromLib(, fn.1, -1)		; Dll file omitted
+				fn := xlib.ui.getFnPtrFromLib(, outFnName, -1)				; Dll file omitted
 		} ; else implies fn is a pointer
-		if type(fn) != "Integer" || !fn
-			xlib.exception(A_ThisFunc " failed, fn: " fn)
+		if type(fn) !== "Integer" || !fn
+			xlib.exception(A_ThisFunc . " failed, fn: " . string(fn))
 		return fn
+	}
+	setupNumputParams(){
+		local
+		npp := []
+		for k, type in this.decl
+			npp[k] := instr(type, 'str') || ( (c:=substr(type, -1)) == '*' || c = 'p' ) ? 'ptr' : type
+		return npp
 	}
 	setupOffsetArray(decl){
 		; Builds an array of offsets for the parameters. In 32 bits each parameter offset is an multiple of 4, on 64 bit it is a multiple of 8 (bytes)
@@ -60,10 +68,10 @@ class callback {
 		callId := this.callId++ ; In case of interruptions
 		this.paramCache[ callId ] := p := xlib.mem.globalAlloc( this.paramSize )	; p - pointer to params
 		, o := this.o																; offsets, zero based index
-		, d := this.decl															; decl, types
+		, npp := this.numputParams													; numput params, types from decl
 		
 		for k, par in params														; Write parameters to memory
-			numput( par, p, o[k-1], d[k] )
+			numput( par, p, o[k-1], npp[k] )
 		
 		this.retCache[ callId ] := r :=	xlib.mem.globalAlloc( 8 )					; All returns are 8 bytes, r - return pointer
 		
@@ -78,7 +86,7 @@ class callback {
 		; => is a closure (due to free, p and r)
 				
 		free := xlib.mem.globalFree.bind('')						; func for freeing return and params
-		cleanUpFn :=   ( struct ) => ( free.call(p), free.call(r) ) ; xlib.struct passes this (it self) when it calls the clean up function.
+		cleanUpFn :=   ( struct ) => ( free.call(p), free.call(r) ) ; instances of xlib.struct passes this (it self) when it calls the clean up function.
 		
 		pv := new xlib.struct( structSize,  cleanUpFn, a_thisfunc . " ( pv )") ; name the struct 'a_thisfunc ( pv )' for db purposes.
 		pv.build(	 
@@ -89,26 +97,33 @@ class callback {
 		
 		return [pv, callId]
 	}
+	
 	; Object to store and get result from. 
-	createResObj(pargs, o, decl, ret, max) {
+	createResObj(pargs, savedParams, o, npp, pRet, rt, max) {
 		; input, free vars.
-		; pargs,	pointer to arguments passed by user.
-		; o,		offsets of arguments.
-		; decl,		the function declaration, for correct types.
-		; ret,		the return value.
-		; max,		the max index for k parameter of __get
+		; pargs,		pointer to arguments passed by user.
+		; savedParams,	list of saved parameters, for things such as 'str' and 'int*'
+		; o,			offsets of arguments.
+		; npp,			numputParams from the function declaration, for correct types.
+		; pRet,			pointer to the return value.
+		; rt,			return type, eg, str, int*, char
+		; max,			the max index for k parameter of __get
 		local
 		return	{ base : { __get : func("__get"), __class : "resObj" } }
 		__get(this, k := 0, derf*) { ; closure
 			; k parameter number to retreive, omit to fetch the return, eg return := res[]
 			; derf, dereference the parameter to this type. Eg, if parameter k is a pointer to a pointer to a 'string', str := res[k, "ptr", "str"]
 			global xlib
-			if type(k) != "Integer"
+			if type(k) !== "Integer"
 				xlib.exception("Invalid type, must be integer, got:"  . type(k))
 			if k == 0									; get return value
-				r := ret
+				r := instr(rt, 'str')	? strget(numget(pRet), rt = 'astr' ? 'cp0' : 'UTF-16') 									; return type is str, astr, wst
+										: ( (c:=substr(rt, -1)) == '*' || c = 'p' ) ? numget(numget(pRet), rtrim(rt, '*pP')) 	; return type is int*, charP etc...
+																					: numget(pRet, rt)							; return type is int, char etc...
+			else if savedParams && savedParams.haskey(k)
+				r := savedParams[ k ].val
 			else if  k > 0 && k <= max					; get parameter
-				r := numget(pargs, o[k-1], decl[k])
+				r := numget(pargs, o[k-1], npp[k])
 			else										; no such parameter
 				xlib.exception("Index out of bounds: " . string(k) . " ( 0 - " . string(max) . " )")
 			if derf.length() {
@@ -129,5 +144,4 @@ class callback {
 			}
 		}
 	}
-	
 }
