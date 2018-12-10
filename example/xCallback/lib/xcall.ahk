@@ -78,7 +78,6 @@ class xcall extends xlib.callback {
 																false													; Do not start
 															)
 		this.outstandingCallbacks[ callbackNumber ] := this.autoRelease ? true : pv
-		;, this.savedParams[ callbackNumber ] := savedParams
 		, this.nCallbacksRunning++
 		, this.handler.startTask( callbackNumber )																		; Start
 		
@@ -91,7 +90,7 @@ class xcall extends xlib.callback {
 			; which has the last reference to this closure, hence 'pv' is released and its clean up function is called. It releases the return address and the parameter list.
 			; Note, one line
 			pRet := pv.get('ret')	; get the pointer to the return value. If desired, it will be dereferenced according to the declared return type, as stored in rt.
-			, resObj := xlib.callback.createResObj(pv.get('params'), savedParams, o, npp, pRet, rt, pv.nMembers)	; Create a result object.
+			, resObj := xlib.callback.createResObj( pv.get('params'), savedParams, o, npp, pRet, rt, p.length() )	; Create a result object.
 			, callback.call(resObj) ; callback is a parameter of the outer function.
 		}
 	}
