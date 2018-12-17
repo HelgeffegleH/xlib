@@ -1,6 +1,6 @@
 ﻿#include ccore.ahk	; compiled function.
 class threadHandler {
-	static callbackMsgNumber := 0x5537
+	
 	;<< new >>
 	__new(maxTasks := 8){
 		this.maxTasks := maxTasks
@@ -236,13 +236,13 @@ class threadHandler {
 			return
 		local msgFn
 		msgFn := xlib.threadHandler.msgFn := ObjBindMethod(xlib.threadHandler,"callbackReciever")
-		OnMessage(xlib.threadHandler.callbackMsgNumber, msgFn, 200)	; Ponder this, 200 that is.
+		OnMessage(xlib.constants.msgNumber, msgFn, 200)	; Ponder this, 200 that is.
 		xlib.threadHandler.isRegistredForCallbacks := true
 	}
 	OnMessageUnReg(){	; unregister callbacks, needed to make script not persistent.
 		if !xlib.threadHandler.isRegistredForCallbacks
 			return
-		OnMessage(xlib.threadHandler.callbackMsgNumber, xlib.threadHandler.msgFn, 0)
+		OnMessage(xlib.constants.msgNumber, xlib.threadHandler.msgFn, 0)
 		xlib.threadHandler.isRegistredForCallbacks := false
 	}
 	makeCallbackStruct(pBin,pArgs,callbackNumber){
@@ -267,7 +267,7 @@ class threadHandler {
 		static sizeOfParams := A_PtrSize*5+4
 		static pPostMessage  :=  0
 		static msgHWND  :=  0
-		
+		static msgNumber := 0
 		local 
 		global xlib
 		
@@ -275,6 +275,7 @@ class threadHandler {
 			C  :=  xlib.constants
 			pPostMessage  :=  C.pPostMessage
 			msgHWND  :=  C.msgHWND
+			msgNumber := C.msgNumber
 		}
 		
 		udf		 :=  new xlib.struct(sizeOfudf,, "taskCallbackUDF")
@@ -291,7 +292,7 @@ class threadHandler {
 						,["Ptr",	msgHWND,				"hwnd"				]		; See xlib.constants.msgHWND.
 						,["Ptr",	&this,					"this"				]		; See callbackReciever.
 						,["Ptr",	callbackNumber,			"callbackNumber"	]		; The threads index, internal.
-						,["Uint",	this.callbackMsgNumber, "callbackMsgNumber"	])		; Defined at the top of this file.
+						,["Uint",	msgNumber, 				"callbackMsgNumber"	])		; Defined at the top of this file.
 		
 		; Only increment ref count of 'this' and set clean up function after struct successfully has been built
 		ObjAddRef(&this)	; Increment the reference count to ensure the object exists when the callback is recieved. See callbackReciever()
