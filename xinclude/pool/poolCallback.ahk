@@ -115,21 +115,24 @@ class poolCallback {
 			ss := new xlib.struct(sizeof_ss,,  this.sn('scriptSync', a_thisfunc))	; Create struct and name it for db. purposes.
 			static p := 'ptr'	; for convenince
 			static u := 'uint'
+			
+			this_ptr := &this	; pointer to this, needs to be passed to identify the object when recieving the the sync message. 
+			
 			ss.build( 	; build the struct
 						[p, condFns, 		'condFns'],
 						[p, ppm, 			'pPostMessage'],
 						[p, hwnd, 			'hwnd'],
-						[p, &this, 			'wParam'],
+						[p, this_ptr, 		'wParam'],
 						[p, callbackNumber, 'lParam'],
 						[u, msg, 			'msg']
 					)
 			
 			; Only increment ref count of 'this' and set clean up function after struct successfully has been built
 			; Increment the reference count to ensure the object exists when the callback is recieved.
-			; Needs to be released when the struct is deleted, hence func('objrelease').bind( &this ) is used as clean up function for the struct.
+			; Needs to be released when the struct is deleted, hence 'cleanupfn := (s) => objrelease( this_ptr )' is used as clean up function for the struct.
 		
-			objaddref &this
-			cleanupfn := func('objrelease').bind( &this )
+			objaddref this_ptr
+			cleanupfn := (s) => objrelease( this_ptr )
 			ss.setCleanUpFunction cleanupfn
 			
 			this.ss := ss ; Will be put in context struct, see createContextStruct()
