@@ -71,10 +71,11 @@ class poolCallback {
 			; condFns, array of arrays of function pointers to call before scriptCallback, only call scriptCallback if all return true. If no condition, always call scriptCallback if it is given.
 			local
 			global xlib
-			if scriptCallback {	; sets this.ss, struct scriptSync
-				this.createSyncStruct 0, condFns
-				; Maybe init msghandling.
-				; Manage scriptCallback function
+			if scriptCallback {								
+				this.createSyncStruct 0, condFns			; sets this.ss, struct scriptSync
+				xlib.poolCallback.messageReg				; initialises message handling
+				this.scriptCallback := scriptCallback		; this will be called when the script syncs
+				
 			} else {
 				this.ss := this.z_ptr	; let scriptSync sync struct be a zero pointer
 			}
@@ -260,7 +261,7 @@ class poolCallback {
 			return name . (fn ? '`n`nCreated in: ' . fn : '')
 		}
 		
-		cleanUp(){
+		cleanUp() {
 			msgbox 'clean up not implemented yet'
 		}
 		
@@ -281,4 +282,41 @@ class poolCallback {
 		static raw32 := [3968029526,611617556,610044708,205949728,175423621,69485705,4280556681,109774934,2332575883,3380937808,160105844,2307529865,285156372,2231656075,2336519387,1958774019,2333510429,76088402,609519908,2333146884,8954643,3531931648,3229942900,1133191540,608471312,205753100,136594569,2299806603,2332304452,76089411,72613668,2198924419,1583027396,2415922370,0,2425393296]
 		static raw64 := [2202555222,2303207660,1384859862,3414771736,1959953736,274136835,1208388424,1209028747,1208502411,125096581,1209174856,4291894409,1586186256,3682945032,2336769652,3229960195,2336758900,3246999574,139627336,2202538239,92864571,48,3229942900,1401627252,1267419176,1133201424,1267420168,1133202464,3296938008,1214143272,258400511,17439,683967304,2428722779,0,2425393296]
 	}
+	
+	; Message handling - for script sync.
+		
+	messageReceiver(wParam, lParam, msg, hwnd) {
+		/*
+			see scriptSync struct,
+			HWND 			hwnd;				// handle to the window which will recieve the msg.
+			WPARAM 			wParam;				// "this" reference
+			LPARAM 			lParam;				// callbackNumber
+			
+		*/
+		local
+		global xlib
+		pc := object(wParam)					; get the poolCallback object.
+		pc.scriptCallback.call pc.getpParams()	; call the script callback.
+		;pc.ss := ''	; release the sync struct, it holds a reference to pc. If user has no more references to pc, pc is released when this function returns.
+	}
+	
+	
+	static isMonitoringMessages := false
+	messageReg() {
+	; Set up for recieving callback messages.
+		if xlib.poolCallback.isMonitoringMessages
+			return
+		local msgFn
+		msgFn := xlib.poolCallback.msgFn := objBindMethod(xlib.poolCallback, 'messageReceiver')
+		onMessage xlib.constants.msgNumber, msgFn, 200
+		xlib.poolCallback.isMonitoringMessages := true
+	}
+	
+	messageUnreg(){	; unregister callbacks, needed to make script not persistent.
+		if !xlib.poolCallback.isMonitoringMessages
+			return
+		onMessage xlib.constants.msgNumber, xlib.poolCallback.msgFn, 0
+		xlib.poolCallback.isMonitoringMessages := false
+	}
+	
 }
