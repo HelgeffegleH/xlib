@@ -23,18 +23,21 @@ class jitFn {
 	getFunc(decl, byref rt_str, byref declStrOut := ""){
 		local
 		global xlib
-		declStr := this.declToStr(decl, rt, isCdecl) ; Convert the declaration to string representation
+		isCdecl := false
+		is_va := false
+		declStr := this.declToStr(decl, rt, isCdecl, is_va) ; Convert the declaration to string representation
 		rt_str := rt
 		c := isCdecl ? "c" : ""
-		cacheKey := declStr . rt_str . c
+		va := is_va ? "..." : ""
+		cacheKey := declStr . rt_str . c . va
 		if this.cache.haskey(cacheKey)			; If the cache contains such a function, return it
 			return this.cache[cacheKey]
 		if instr(declStr, "void") {	; NOTE! Not sure if this was really tested.
 			declStr := "11"
-			cacheKey := declStr . rt_str . c
+			cacheKey := declStr . rt_str . c . va
 		}
 		this.declStrToPtRt(declStr, pt, rt)		; Convert the declaration string to an array of numeric representation of the parameter types, pt, and return type, rt.
-		bin := this.compile(rt, pt, isCdecl)
+		bin := this.compile(rt, pt, isCdecl, is_va)
 		(bin) ? this.cache[cacheKey] := bin : xlib.exception(A_ThisFunc " failed.")	; Error should not occur, throw should occur in in this.compile(...).		
 			
 		return bin
@@ -48,11 +51,11 @@ class jitFn {
 		msgbox str
 	}
 	; Compile
-	compile(rt, pt, cdecl){		
-		return a_ptrsize == 4 ? this.compile32(rt, pt, cdecl) : this.compile64(rt, pt, cdecl)
+	compile(rt, pt, cdecl, is_va){		
+		return a_ptrsize == 4 ? this.compile32(rt, pt, cdecl) : this.compile64(rt, pt, cdecl, is_va)
 	}
 	
-	declToStr(decl, byref ccrt, byref isCdecl){
+	declToStr(decl, byref ccrt, byref isCdecl, byref is_va){
 		static typeMap := 	a_ptrsize == 8 
 							?	{	; 64 bit
 									ptr		: "1",	uptr	: "1", 
@@ -79,7 +82,9 @@ class jitFn {
 		
 		if instr(ccrt, "cdecl")
 			isCdecl := true, ccrt := strreplace(ccrt,"cdecl") ; Mark as cdecl and remove cdecl from the string
-		ccrt := trim(ccrt) ; trim white space in case cdecl was removed
+		if instr(ccrt, "...")
+			is_va := true, ccrt := strreplace(ccrt,"...") ; Mark as va and remove ... from the string
+		ccrt := trim(ccrt) ; trim white space in case cdecl and or ... was removed
 	
 		declStr := ""
 		if decl.length() < 2					; either void f(void) or 'type' f(void)
@@ -211,11 +216,11 @@ class jitFn {
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	
-	compile64(rt, pt, cdecl := false, _va := false){
+	compile64(rt, pt, cdecl := false, is_va := false){
 		; pt is array of parameter types, int = 1, double = 2, float = 3
 		; rt is the return type, int, double.
 		static int := "1", double := "2", float := "3"
-		local va := true	; Default for now, consider making option because not needed in general.
+		local va := is_va	; Default for now, consider making option because not needed in general.
 		
 		local nParams := pt.length()
 		static sds := 0x20											; shadow space
