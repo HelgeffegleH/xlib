@@ -98,7 +98,7 @@ class poolCallback {
 				unsigned int 	msg;				// message number
 			} *ss;
 		*/
-			; this function is similar to xlib.ui.threadHanlder.makeCallbackStruct
+			; this function is similar to xlib.threadHanlder.makeCallbackStruct
 			static sizeof_ss := a_ptrsize * 5 + 4
 			
 			local
@@ -130,10 +130,10 @@ class poolCallback {
 			
 			; Only increment ref count of 'this' and set clean up function after struct successfully has been built
 			; Increment the reference count to ensure the object exists when the callback is recieved.
-			; Needs to be released when the struct is deleted, hence 'cleanupfn := (s) => objrelease( this_ptr )' is used as clean up function for the struct.
-		
+			; Needs to be released when the struct is deleted, hence 'cleanupfn := (struct) => objrelease( this_ptr )' is used as clean up function for the struct.
+			
 			objaddref this_ptr
-			cleanupfn := (s) => objrelease( this_ptr )
+			cleanupfn := (struct) => objrelease( this_ptr )
 			ss.setCleanUpFunction cleanupfn
 			
 			this.ss := ss ; Will be put in context struct, see createContextStruct()
@@ -210,7 +210,7 @@ class poolCallback {
 			
 			local
 			global xlib
-			; if no clean up parameters are specified, there is no need to construct a struct, return 0
+			; if no clean up parameters are specified, there is no need to construct a struct, use the zero pointer to indicate.
 			if !cp {
 				this.pcu := this.z_ptr
 				return
