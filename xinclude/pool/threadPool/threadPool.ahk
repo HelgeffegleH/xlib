@@ -3,6 +3,7 @@
 ; Note:
 ; 	TP_IO currently not implemented.
 ;	Uses clean-up group, all callback objects must be created with parameter: poolHasCleanUpGroup := true
+;	This should probably be redesigned - split timer, work and wait handling.
 class threadPool extends xlib.bases.cleanupBase {
 
 	; Important class members:
@@ -69,14 +70,23 @@ class threadPool extends xlib.bases.cleanupBase {
 		this.callbacks[cbid].callback.wait()
 		return true
 	}
+	
 	; Work:
+	work_callback := 0
 	addWork(pfnwk, pv := 0, p*){
 		; Creates a work object, which is associated with the pools callback environment
 		; but doesn't submit it. Use startAll() or start(cbid)
+		; This method depends on createWork being called already. Redesign.
 		local work := this.createWork(pfnwk, pv, p*)
-		local cbid := this.callbacks.push({callback:work, params:[], work_callback:this.work_callback})
+		local cbo := {callback : work, params : [], work_callback : this.work_callback}	; create a callback object to store data
+		local cbid := this.callbacks.push( cbo )										; save it
+		if this.work_callback
+			setCleanUpFunction cbo, (self) => self.work_callback.ss := '' ; releases the sync struct, must be done to properly release the poolCallback object. 
 		this.work_callback := ''	; this is setup in createWork if user wants script callback, it is saved in the callback object and pushed to the pool callbacks above
 		return cbid
+		setCleanUpFunction(o, cuf){
+			objsetbase o, {__delete : cuf}	; call cuf when o is released
+		}
 	}
 	createWork(pfnwk, pv := 0, p*){
 		; returns a work object, which is associated with the pools callback environment
@@ -107,6 +117,7 @@ class threadPool extends xlib.bases.cleanupBase {
 		return cbid
 	}
 	; Timer:
+	timer_callback := 0 ; 
 	addTimer(pfnti, pv := 0, msPeriod := 0, ftDueTime := 0, msWindowLength := 0, p*){
 		if p.length()  ; handle script callback
 			this.timer_callback := this.wrapCallback(pfnti, pv, xlib.poolCallback.timer, p)		
@@ -116,12 +127,13 @@ class threadPool extends xlib.bases.cleanupBase {
 	}
 	createTimer(pfnti, pv := 0, msPeriod := 0, ftDueTime := 0, msWindowLength := 0, p*){
 		; Creates a timer object
+		; this method depends on addTimer being called before it. See this.timer_callback. Redesign
 		static ft_factor := 10000	; Automatically converts ftDueTime to ms rather than nano-seconds. Set to 1 to avoid this.
 		local ft, pftDueTime
 		
 		local timer := new xlib.poolbase.TP_TIMER(pfnti, pv, this.cbe.getPointer(), this.poolHasCleanUpGroup)
 		; Set up pftDueTime
-		if ftDueTime == '' {								; If blank, the timer is canceled.
+		if ftDueTime == '' {								; If blank, the timer is canceled. Note: Use cancelTimer instead.
 			pftDueTime := 0
 		} else if type(ftDueTime) == 'Integer' {
 			ft := new xlib.FILETIME(ftDueTime*ft_factor)
@@ -131,8 +143,14 @@ class threadPool extends xlib.bases.cleanupBase {
 			pftDueTime := ftDueTime.pointer
 		} ; end set up pftDueTime
 		local cbo := {callback:timer, params:[pftDueTime, msPeriod, msWindowLength], timer_callback : this.timer_callback} 	; Note the order of params [...]
+		if this.timer_callback
+			setCleanUpFunction cbo, (self) => self.timer_callback.ss := '' ; releases the sync struct, must be done to properly release the poolCallback object.
+		
 		this.timer_callback := ''	; this is setup in addTimer if user wants script callback, it is saved in the callback object and pushed to the pool callbacks above
 		return cbo
+		setCleanUpFunction(o, cuf){
+			objsetbase o, {__delete : cuf}	; call cuf when o is released
+		}
 	}
 	setTimer(callback := 0, pfnti := 0, pv := 0, msPeriod := 0, ftDueTime := 0, msWindowLength := 0){
 		if !pfnti
@@ -141,6 +159,17 @@ class threadPool extends xlib.bases.cleanupBase {
 		local cbid := this.addTimer(pfnti,pv, msPeriod, ftDueTime, msWindowLength, p*)
 		this.start(cbid)
 		return cbid
+	}
+	cancelTimer(cbid){
+		local
+		global xlib
+		; cancels the timer at cbid  - callback id.
+		if !this.callbacks.haskey( cbid )
+			xlib.exception('Invalid callback id: ' . string(cbid) . '.') 
+		timer := this.callbacks[cbid].callback
+		if type(timer) !== 'xlib.poolbase.TP_TIMER'
+			xlib.exception('Invalid method for type: ' . type(timer) . ' ( callback id: ' . string(cbid) . ' ).') 
+		timer.submit(0, 0, 0)
 	}
 	; Internal methods
 	wrapCallback(byref thread_callback, byref pv, wrapper_class, script_callback){
@@ -168,10 +197,10 @@ class threadPool extends xlib.bases.cleanupBase {
 	; Mandatory clean-up
 	cleanUp(){
 		; Destroys the pool, the callback environment and clean-up group
+		
 		this.callbacks := ''
 		this.cleanUpGroup := ''
 		this.cbe := ''
 		this.pool := ''
-		
 	}
 }
