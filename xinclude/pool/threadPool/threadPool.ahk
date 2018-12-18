@@ -84,6 +84,7 @@ class threadPool extends xlib.bases.cleanupBase {
 		global xlib
 		if p.length() {	; handle script callback
 			;cbid := this.callbacks.length() + 1
+			
 			this.work_callback := this.wrapCallback(pfnwk, pv, xlib.poolCallback.work, p)	; pfnwk and pv are byref an updated to point to the wrapper function and its arguments
 			;work_callback := new xlib.poolCallback.work(pfnwk, pv, p*)			
 			;pfnwk := work_callback.getEntryBin()
@@ -142,7 +143,7 @@ class threadPool extends xlib.bases.cleanupBase {
 		return cbid
 	}
 	; Internal methods
-	wrapCallback(byref thread_callback, byref pv, script_callback, wrapper_class){
+	wrapCallback(byref thread_callback, byref pv, wrapper_class, script_callback){
 		; Help function for createWork, createTimer, ...
 		local
 		global xlib
