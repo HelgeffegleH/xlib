@@ -46,7 +46,7 @@ aWinWait(cb,
 	}
 }
 
-
+; Example,
 cb := (r)=> msgbox( r[0] )
 aWinWait cb, 'Notepad',, 3000					; waits 3 seconds for window with class Notepad to exist.
 aWinWait cb, 'AutoHotkeyGUI', 'MyGui', 3000		; waits 3 seconds for window with class AutoHotkeyGUI and title MyGui to exist.
