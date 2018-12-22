@@ -22,6 +22,8 @@ The remaining parameters are the same as for the built-in function [`DllCall`](h
 * At most `14` parameters are supported. 
 * To call a variadic function on __64-bit__  build, specify `...`, (three dots) for the `ReturnType`, in addition to the (optional) calling convention and return type. The `...` is ignored on __32-bit__ build.
 
+Once the function has been called, the script becomes persistent due to internal message monitoring, to turn off, call `xlib.threadHandler.OnMessageUnReg()`, when appropriate.
+
 ### The callback function
 
 The callback function is called with one parameter, which is an object, holding the result from the execution of `function`. To retrieve the value of parameter `i`, access member `i` of the result object. I.e, `param_i := result_object[i]`. The return value is stored at `i := 0`. Example,
