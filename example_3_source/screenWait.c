@@ -16,7 +16,7 @@ int screenWait( _cBitmap cb, sleep psleep, getTickCount tic, HWND hwnd, pGdiLib 
 	int result = 1;
 	size_t pixel_count = w * h;
 	int i;	// loop index
-	const unsigned int* old_bits;
+	const unsigned int* old_bits = (const unsigned int*) p1.ppvBits;
 	const unsigned int* new_bits;
 
 	DWORD tick_1 = tic ();
@@ -29,7 +29,7 @@ int screenWait( _cBitmap cb, sleep psleep, getTickCount tic, HWND hwnd, pGdiLib 
 		}
 		
 		// compare the snapshots
-		old_bits = (const unsigned int*) p1.ppvBits;
+		
 		new_bits = (const unsigned int*) p2.ppvBits;
 		i = 0;
 		while (i < pixel_count) {
